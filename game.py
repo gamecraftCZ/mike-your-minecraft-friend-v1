@@ -22,11 +22,11 @@ class Vec3:
         self.z = z
 
 
-def randNotInCenter(size: int):
+def randNotInCenter(size: int, centerDiameter: int = 1):
     # 0, 1, _2_, 3, __4__, 5, _6_, 7, 8
     center = size // 2
 
-    move = 1 + random() * (center - 1)
+    move = centerDiameter + random() * (center - centerDiameter)
     if random() > 0.5:
         move = -move
 
@@ -70,10 +70,12 @@ class Game:
         for h in range(height - 1, height - 3, -1):
             self.generateLeafs(2, h)
 
-    def generateLeafs(self, diameter: int, height: int):
-        print(f"Leafs height: {height}, diameter: {diameter}")
-        for y in range(0, diameter+1):
-            for x in range(0, diameter+1):
+        return height
+
+    def generateLeafs(self, radius: int, height: int):
+        print(f"Leafs height: {height}, radius: {radius}")
+        for y in range(0, radius + 1):
+            for x in range(0, radius + 1):
                 if x == y == 0:
                     continue
 
@@ -95,5 +97,9 @@ class Game:
                 self.environment[0][y][x] = Blocks.GROUND
                 self.environment[height][y][x] = Blocks.GROUND
 
-        self.createTree()
+        treeHeight = self.createTree()
+        if treeHeight == MIN_TREE_HEIGHT:
+            self.player.position.x = randNotInCenter(9, 5)  # 0-8
+            self.player.position.y = randNotInCenter(9, 5)  # 0-8
+
         print("Initialized Game")
