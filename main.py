@@ -9,14 +9,21 @@ def main():
     print("Hi")
     game = Game()
     renderer = Renderer()
-    input("Are you ready!")
+    # input("Are you ready!")
 
-    while True:
-        startTime = time()
-        game.step(WAIT_BETWEEN_FRAMES)
-        renderer.render(game)
-        delta = time() - startTime
-        sleep(WAIT_BETWEEN_FRAMES - delta)
+    try:
+        while True:
+            startTime = time()
+            game.step(WAIT_BETWEEN_FRAMES)
+            renderer.render(game)
+            delta = time() - startTime
+
+            sleep_time = WAIT_BETWEEN_FRAMES - delta
+            if sleep_time > 0:
+                sleep(sleep_time)
+
+    except KeyboardInterrupt:
+        print("Exiting")
 
     print("Hasta La Vista, baby!")
 
