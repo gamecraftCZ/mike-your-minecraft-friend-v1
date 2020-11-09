@@ -40,6 +40,7 @@ class Renderer:
 
     def __init__(self):
         self.canvas = vpython.canvas(title="Be more of who you are!", width=800, height=800)
+        self.canvas.center = v(4, 0, 4)  # Camera to rotate around real center
+
         self.player = vpython.cylinder(axis=v(0, 1.8, 0), up=v(0, 0, 1), radius=0.6, color=vpython.color.red)
-        # self.player = vpython.box(size=v(0.3, 1.8, 0.3), color=vpython.color.red)
         print("Initialized Renderer")
