@@ -59,8 +59,7 @@ class Game:
     player: Player = Player()
 
     def getWoodLeft(self):
-        unique, counts = self.environment.flatten().unique(return_counts=True)
-        return dict(zip(unique, counts))[Blocks.WOOD]
+        return np.count_nonzero(self.environment.flatten() == Blocks.WOOD)
 
     def createTree(self):
         height = MIN_TREE_HEIGHT + int(random() * (1 + MAX_TREE_HEIGHT - MIN_TREE_HEIGHT))  # 5-7
@@ -72,18 +71,24 @@ class Game:
             self.generateLeafs(2, h)
 
     def generateLeafs(self, diameter: int, height: int):
-        for y in range(1, diameter):
-            for x in range(1, diameter):
+        print(f"Leafs height: {height}, diameter: {diameter}")
+        for y in range(0, diameter+1):
+            for x in range(0, diameter+1):
+                if x == y == 0:
+                    continue
+
                 self.environment[height][CENTER + y][CENTER + x] = Blocks.LEAF
+                self.environment[height][CENTER + y][CENTER - x] = Blocks.LEAF
+
+                self.environment[height][CENTER - y][CENTER + x] = Blocks.LEAF
                 self.environment[height][CENTER - y][CENTER - x] = Blocks.LEAF
 
-                self.environment[height][CENTER + x][CENTER + y] = Blocks.LEAF
-                self.environment[height][CENTER - x][CENTER - y] = Blocks.LEAF
 
     def step(self, delta: float):
         print(f"Running next frame step with delta {delta}s")
 
-    def __init__(self) -> None:
+    def __init__(self, renderer) -> None:
+        self.renderer = renderer
         for x in range(9):
             for y in range(9):
                 height = int(random() * 2)  # 0 or 1

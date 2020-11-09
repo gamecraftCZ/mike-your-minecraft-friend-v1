@@ -7,17 +7,19 @@ from renderer import Renderer
 WAIT_BETWEEN_FRAMES = 0.1  # FPS
 def main():
     print("Hi")
-    game = Game()
     renderer = Renderer()
+    game = Game(renderer)
     # input("Are you ready!")
 
     try:
         while True:
             startTime = time()
+
             game.step(WAIT_BETWEEN_FRAMES)
             renderer.render(game)
-            delta = time() - startTime
+            print(f"Wood left: {game.getWoodLeft()}")
 
+            delta = time() - startTime
             sleep_time = WAIT_BETWEEN_FRAMES - delta
             if sleep_time > 0:
                 sleep(sleep_time)
