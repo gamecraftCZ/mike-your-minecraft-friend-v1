@@ -1,6 +1,7 @@
 ## Player
 https://minecraft.gamepedia.com/Player  
 https://minecraft.gamepedia.com/Entity#Motion_of_entities  
+https://github.com/ddevault/TrueCraft/wiki/Vertical-entity-movement#jumping
 
 ### size
 ***Height***: 1.8 block / 1.5 shifting block  
@@ -8,8 +9,13 @@ https://minecraft.gamepedia.com/Entity#Motion_of_entities
 
 ### physics
 ***Acceleration***: 0.08 blocks / tick^2  
-***Terminal velocity***: 3.92 blocks / tick
+***Terminal velocity***: 3.92 blocks / tick  
+
+***Walk Speed***: 0.21585 blocks / tick  
+***Max jump***: 1.2522 blocks  
+
+***Jump acceleration***: Add 0.42 blocks / tick 
 
 
-# Resources
+## ML Resources
 [Baseline Rainbow MineRL agent on github](https://github.com/keisuke-nakata/minerl2020_submission)

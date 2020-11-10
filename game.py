@@ -1,30 +1,15 @@
 from random import random
-from typing import List
-
 import numpy as np
 
-
-class Blocks:
-    AIR = 0
-    GROUND = 1
-    WOOD = 2
-    LEAF = 3
-
-
-class Vec3:
-    x: int or float = 0
-    y: int or float = 0
-    z: int or float = 0
-
-    def __init__(self, x=0, y=0, z=0):
-        self.x = x
-        self.y = y
-        self.z = z
+from constants import MIN_TREE_HEIGHT, WORLD_SHAPE, MAX_TREE_HEIGHT, Blocks
+from structures import Vec3
 
 
 def randNotInCenter(size: int, centerDiameter: int = 1):
     # 0, 1, _2_, 3, __4__, 5, _6_, 7, 8
     center = size // 2
+    if centerDiameter > center:
+        centerDiameter = center
 
     move = centerDiameter + random() * (center - centerDiameter)
     if random() > 0.5:
@@ -35,71 +20,65 @@ def randNotInCenter(size: int, centerDiameter: int = 1):
 
 class Player:
     position: Vec3 = Vec3()
-    rotation: Vec3 = Vec3()
+    rotation: Vec3 = Vec3()  # 0-1
     velocity: Vec3 = Vec3()
 
     def __init__(self):
-        self.position.x = randNotInCenter(9)  # 0-8
-        self.position.y = randNotInCenter(9)  # 0-8
-        self.position.z = 2
+        self.position.x = randNotInCenter(WORLD_SHAPE.x)  # 0-maxX, not in center
+        self.position.y = randNotInCenter(WORLD_SHAPE.y)  # 0-maxY, not in center
+        self.position.z = 3
 
         self.rotation.x = random()
         self.rotation.y = random()
         self.rotation.z = random()
 
 
-MIN_TREE_HEIGHT = 5
-MAX_TREE_HEIGHT = 7
-CENTER = 4
-
-
 class Game:
-    environment: np.ndarray = np.zeros((9, 9, 9),  # environment[z, y, x]
-                                       dtype=np.uint8)  # Environment is 9x9x9 blocks -> 729 blocks in total
+    # environment[z, y, x]
+    environment: np.ndarray = np.zeros((WORLD_SHAPE.z, WORLD_SHAPE.y, WORLD_SHAPE.x), dtype=np.uint8)
     player: Player = Player()
+    center: int = WORLD_SHAPE.x // 2
 
     def getWoodLeft(self):
         return np.count_nonzero(self.environment.flatten() == Blocks.WOOD)
 
-    def createTree(self):
-        height = MIN_TREE_HEIGHT + int(random() * (1 + MAX_TREE_HEIGHT - MIN_TREE_HEIGHT))  # 5-7
-        for i in range(height):
-            self.environment[1 + i][CENTER][CENTER] = Blocks.WOOD
+    def _generateGround(self):
+        for x in range(WORLD_SHAPE.x):
+            for y in range(WORLD_SHAPE.y):
+                height = int(random() * 2)  # 0 or 1
+                self.environment[0][y][x] = Blocks.GROUND
+                self.environment[height][y][x] = Blocks.GROUND
 
-        self.generateLeafs(1, height)
+    def _generateTree(self):
+        height = MIN_TREE_HEIGHT + int(
+            random() * (1 + MAX_TREE_HEIGHT - MIN_TREE_HEIGHT))  # minTreeHeight - maxTreeHeight
+        for i in range(height):
+            self.environment[1 + i][self.center][self.center] = Blocks.WOOD
+
+        self.__generateLeafs(1, height)
         for h in range(height - 1, height - 3, -1):
-            self.generateLeafs(2, h)
+            self.__generateLeafs(2, h)
 
         return height
 
-    def generateLeafs(self, radius: int, height: int):
-        print(f"Leafs height: {height}, radius: {radius}")
+    def __generateLeafs(self, radius: int, height: int):
         for y in range(0, radius + 1):
             for x in range(0, radius + 1):
                 if x == y == 0:
                     continue
 
-                self.environment[height][CENTER + y][CENTER + x] = Blocks.LEAF
-                self.environment[height][CENTER + y][CENTER - x] = Blocks.LEAF
+                self.environment[height][self.center + y][self.center + x] = Blocks.LEAF
+                self.environment[height][self.center + y][self.center - x] = Blocks.LEAF
 
-                self.environment[height][CENTER - y][CENTER + x] = Blocks.LEAF
-                self.environment[height][CENTER - y][CENTER - x] = Blocks.LEAF
+                self.environment[height][self.center - y][self.center + x] = Blocks.LEAF
+                self.environment[height][self.center - y][self.center - x] = Blocks.LEAF
 
+    def __init__(self) -> None:
+        self._generateGround()
 
-    def step(self, delta: float):
-        print(f"Running next frame step with delta {delta}s")
-
-    def __init__(self, renderer) -> None:
-        self.renderer = renderer
-        for x in range(9):
-            for y in range(9):
-                height = int(random() * 2)  # 0 or 1
-                self.environment[0][y][x] = Blocks.GROUND
-                self.environment[height][y][x] = Blocks.GROUND
-
-        treeHeight = self.createTree()
+        treeHeight = self._generateTree()
         if treeHeight == MIN_TREE_HEIGHT:
-            self.player.position.x = randNotInCenter(9, 5)  # 0-8
-            self.player.position.y = randNotInCenter(9, 5)  # 0-8
+            self.player.position.x = randNotInCenter(WORLD_SHAPE.x, 5)  # 0-maxX, not 5 blocks around center
+            self.player.position.y = randNotInCenter(WORLD_SHAPE.y, 5)  # 0-maxY, not 5 blocks around center
 
         print("Initialized Game")
