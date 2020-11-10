@@ -14,5 +14,8 @@ WORLD_SHAPE = Vec3(9, 9, 9)
 MIN_TREE_HEIGHT = 5
 MAX_TREE_HEIGHT = 7
 
-GRAVITY = 0.008  # Blocks / 0.1tick^2
-TERMINAL_VELOCITY = 0.392  # Blocks / 0.1tick
+GRAVITY = 0.08  # Blocks / 1 tick^2
+
+TERMINAL_VELOCITY = 3.92  # Blocks / 1 tick
+JUMP_VELOCITY = 0.42  # 0.12522 # 0.25044  # Blocks / 1 tick
+MOVE_VELOCITY = 0.21585  # Blocks / 1 tick

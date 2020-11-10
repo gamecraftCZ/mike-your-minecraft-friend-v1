@@ -34,14 +34,12 @@ class Renderer:
 
     def render_player(self, game: Game):
         position = game.player.position
-        print(position.z)
         self.player.pos = v(position.y, position.z, position.x)
 
 
     def render(self, game: Game):
         self.render_blocks(game)
         self.render_player(game)
-        print("Rendered")
 
     def __init__(self):
         self.canvas = vpython.canvas(title="Be more of who you are!", width=800, height=800)

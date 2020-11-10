@@ -5,40 +5,19 @@ from typing import Tuple, List, Union
 from constants import GRAVITY, TERMINAL_VELOCITY, WORLD_SHAPE
 from game import Game
 from structures import Vec2
-
-
-def getCollisionsBottom(posX, posY) -> List[Vec2]:
-    relPosX = posX % 1
-    relPosY = posY % 1
-
-    X = []
-
-    if -0.3 < posX < WORLD_SHAPE.x - 0.3:  # <= WORLD_SHAPE.x - 0.5:
-        X.append(math.floor(posX + 0.3))
-    if relPosX < 0.3 or relPosX > 0.7:
-        # Collision with 2nd block on X axis
-        if 0.7 <= posX < WORLD_SHAPE.x + 0.7:
-            X.append(math.floor(posX + 0.3) - 1)
-
-    Y = []
-
-    if -0.3 < posY < WORLD_SHAPE.y - 0.3:  # <= WORLD_SHAPE.y - 0.5:
-        Y.append(math.floor(posY + 0.3))
-    if relPosY < 0.3 or relPosY > 0.7:
-        # Collision with 2nd block on Y axis
-        if 0.7 <= posY < WORLD_SHAPE.y + 0.7:
-            Y.append(math.floor(posY + 0.3) - 1)
-
-    return [Vec2(x, y) for x in X for y in Y]
+from utils import getCollisionsBottom, isStanding
 
 
 class Physics:
     # Do 0.1tick step
-    def step(self, game: Game):
-        self.resolveGravity(game)
+    def step(self, game: Game, delta: int = 0.1):
+        self._resolveGravity(game, delta)
+        self._resolveMovement(game, delta)
+        self._slowDownXYVelocity(game, delta)
 
-    def resolveGravity(self, game: Game):
-        game.player.velocity.z -= GRAVITY
+    def _resolveGravity(self, game: Game, delta: int):
+        game.player.velocity.z -= GRAVITY * delta
+        game.player.velocity.z *= 1 - (0.02 * delta)  # 0.98 -> https://www.mcpk.wiki/wiki/Vertical_Movement_Formulas
         if abs(game.player.velocity.z) > TERMINAL_VELOCITY:
             game.player.velocity.z = copysign(TERMINAL_VELOCITY, game.player.velocity.z)
 
@@ -46,7 +25,7 @@ class Physics:
         posY = game.player.position.y
         posZ = game.player.position.z
 
-        newZ = game.player.position.z + game.player.velocity.z
+        newZ = game.player.position.z + game.player.velocity.z * delta
 
         collisions = getCollisionsBottom(posX, posY)
 
@@ -61,3 +40,12 @@ class Physics:
                 game.player.velocity.z = 0
 
         game.player.position.z = newZ
+
+    def _resolveMovement(self, game: Game, delta: int):
+        game.player.position.x += game.player.velocity.x * delta
+        game.player.position.y += game.player.velocity.y * delta
+        # TODO
+
+    def _slowDownXYVelocity(self, game: Game, delta: int):
+        if isStanding(game.player.position, game.environment):
+            pass

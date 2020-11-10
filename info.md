@@ -2,19 +2,20 @@
 https://minecraft.gamepedia.com/Player  
 https://minecraft.gamepedia.com/Entity#Motion_of_entities  
 https://github.com/ddevault/TrueCraft/wiki/Vertical-entity-movement#jumping
+https://www.mcpk.wiki/wiki/Vertical_Movement_Formulas
 
 ### size
 ***Height***: 1.8 block / 1.5 shifting block  
 ***Width***: 0.6 block
 
 ### physics
-***Acceleration***: 0.08 blocks / tick^2  
+***Acceleration (gravity)***: 0.08 blocks / tick^2  
 ***Terminal velocity***: 3.92 blocks / tick  
 
 ***Walk Speed***: 0.21585 blocks / tick  
 ***Max jump***: 1.2522 blocks  
 
-***Jump acceleration***: Add 0.42 blocks / tick 
+***Jump acceleration***: Add 0.42 blocks / tick  
 
 
 ## ML Resources
