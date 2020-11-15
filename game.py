@@ -1,9 +1,10 @@
+import math
 from random import random
 
 import numpy as np
 
 from constants import MIN_TREE_HEIGHT, WORLD_SHAPE, MAX_TREE_HEIGHT, Blocks, JUMP_VELOCITY, WALK_VELOCITY
-from structures import Vec3
+from structures import Vec3, Vec2
 from utils import playerIsStanding
 
 
@@ -22,7 +23,7 @@ def randNotInCenter(size: int, centerDiameter: int = 1):
 
 class Player:
     position: Vec3 = Vec3()
-    rotation: Vec3 = Vec3()  # 0-1
+    rotation: Vec2 = Vec2()  # X -> left/right (0-2PI), Y -> up/down (0(down) - 1PI(up))
     velocity: Vec3 = Vec3()
 
     def __init__(self):
@@ -30,9 +31,8 @@ class Player:
         self.position.y = randNotInCenter(WORLD_SHAPE.y)  # 0-maxY, not in center
         self.position.z = 2
 
-        self.rotation.x = random()
-        self.rotation.y = random()
-        self.rotation.z = random()
+        self.rotation.x = random() * 2 * math.pi
+        self.rotation.y = random() * math.pi
 
 
 class Game:
@@ -102,3 +102,11 @@ class Game:
     def jump(self):
         if playerIsStanding(self.player.position, self.environment):
             self.player.velocity.z = JUMP_VELOCITY
+
+    # 0 - 360 degrees -> 0 - 2PI rad
+    def lookLeftRight(self, radian: float):
+        self.player.rotation.x = radian
+
+    # 0 - 360 degrees -> 0 - 2PI rad
+    def lookUpDown(self, radian: float):
+        self.player.rotation.y = radian

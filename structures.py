@@ -22,6 +22,9 @@ class Vec2:
     def floor(self) -> 'Vec2':
         return Vec2(math.floor(self.x), math.floor(self.y))
 
+    def __str__(self):
+        return f"(x: {self.x / 1.0:.3}, y: {self.y / 1.0:.3})"
+
 class Vec3:
     x: int or float = 0
     y: int or float = 0
@@ -62,3 +65,6 @@ class Vec3:
 
     def floor(self) -> 'Vec3':
         return Vec3(math.floor(self.x), math.floor(self.y), math.floor(self.z))
+
+    def __str__(self):
+        return f"(x: {self.x / 1.0:.3}, y: {self.y / 1.0:.3}, z: {self.z / 1.0:.3})"

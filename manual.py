@@ -1,3 +1,4 @@
+import math
 from time import time, sleep
 
 from game import Game
@@ -14,15 +15,25 @@ ADDITIONAL_WAIT_SECONDS = 0.05  # To reduce lag in preview
 def processKeyboardInput(game: Game, key: str):
     print(f"Key input: '{key}'")
 
-    if "a" in key:
+    if "down" in key:
+        game.lookUpDown(max(0, (game.player.rotation.y - 0.1)))
+    elif "up" in key:
+        game.lookUpDown(min(math.pi, (game.player.rotation.y + 0.1)))
+
+    elif "left" in key:
+        game.lookLeftRight((game.player.rotation.x - 0.1) % (2 * math.pi))
+    elif "right" in key:
+        game.lookLeftRight((game.player.rotation.x + 0.1) % (2 * math.pi))
+
+    elif "a" in key:
         game.left()
-    if "d" in key:
+    elif "d" in key:
         game.right()
-    if "w" in key:
+    elif "w" in key:
         game.forward()
-    if "s" in key:
+    elif "s" in key:
         game.backward()
-    if " " in key:
+    elif " " in key:
         game.jump()
 
 
