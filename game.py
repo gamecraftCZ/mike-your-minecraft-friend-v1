@@ -85,19 +85,33 @@ class Game:
 
         print("Initialized Game")
 
-    # TODO account for player rotation in movement!
-
     def forward(self):
-        self.player.velocity.x = -WALK_VELOCITY
+        x = math.cos(self.player.rotation.x)
+        y = math.sin(self.player.rotation.x)
+
+        self.player.velocity.x = WALK_VELOCITY * x
+        self.player.velocity.y = WALK_VELOCITY * y
 
     def backward(self):
-        self.player.velocity.x = WALK_VELOCITY
+        x = math.cos(self.player.rotation.x)
+        y = math.sin(self.player.rotation.x)
+
+        self.player.velocity.x = - WALK_VELOCITY * x
+        self.player.velocity.y = - WALK_VELOCITY * y
 
     def left(self):
-        self.player.velocity.y = WALK_VELOCITY
+        x = math.cos(self.player.rotation.x - math.pi / 2)
+        y = math.sin(self.player.rotation.x - math.pi / 2)
+
+        self.player.velocity.x = WALK_VELOCITY * x
+        self.player.velocity.y = WALK_VELOCITY * y
 
     def right(self):
-        self.player.velocity.y = -WALK_VELOCITY
+        x = math.cos(self.player.rotation.x - math.pi / 2)
+        y = math.sin(self.player.rotation.x - math.pi / 2)
+
+        self.player.velocity.x = - WALK_VELOCITY * x
+        self.player.velocity.y = - WALK_VELOCITY * y
 
     def jump(self):
         if playerIsStanding(self.player.position, self.environment):
