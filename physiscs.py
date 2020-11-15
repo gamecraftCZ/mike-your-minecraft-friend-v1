@@ -1,7 +1,7 @@
 import math
 from math import copysign
 
-from constants import GRAVITY, TERMINAL_VELOCITY, PLAYER_RADIUS, PLAYER_HEIGHT
+from constants import GRAVITY, TERMINAL_VELOCITY, PLAYER_RADIUS, PLAYER_HEIGHT, WORLD_SHAPE
 from game import Game
 from structures import Vec3, Axis
 from utils import getCollisionsBottom, playerIsStanding, getCollision, getRectanglePointsAroundPointVec3, nthRoot
@@ -30,14 +30,27 @@ class Physics:
 
         collisions = getCollisionsBottom(game.player.position.toVec2(Axis.z))
 
-        z = int(newZ)
-        if z < 0:
-            z = 0
+        zBottom = int(newZ)
+        if zBottom < 0:
+            zBottom = 0
+
+        zTop = int(newZ + PLAYER_HEIGHT)
+        if zTop >= WORLD_SHAPE.z:
+            zTop = WORLD_SHAPE.z - 1
+
         for collision in collisions:
-            block = getCollision(game.environment, Vec3(collision.x, collision.y, z))
-            if block:
+            # Not falling thru floor
+            blockBottom = getCollision(game.environment, Vec3(collision.x, collision.y, zBottom))
+            if blockBottom:
                 if int(posZ) > int(newZ):  # Only prevents falling into the block
-                    newZ = z + 1
+                    newZ = zBottom + 1
+                game.player.velocity.z = 0
+
+            # Hitting head to ceiling detection
+            blockTop = getCollision(game.environment, Vec3(collision.x, collision.y, zTop))
+            if blockTop:
+                print("COLLISION top")
+                newZ = zTop - PLAYER_HEIGHT - 0.00001  # Because float is not accurate enough
                 game.player.velocity.z = 0
 
         game.player.position.z = newZ
@@ -52,7 +65,7 @@ class Physics:
         if game.player.velocity.x < 0:
             minusXPos = game.player.position.copy()
             minusXPos.x -= PLAYER_RADIUS
-            minusXPos.z += PLAYER_HEIGHT / 2 + 0.00001  # Because float is not accurate enough
+            minusXPos.z += PLAYER_HEIGHT / 2 + 0.000001  # Because float is not accurate enough
             pointsMinusX = getRectanglePointsAroundPointVec3(minusXPos, PLAYER_RADIUS, PLAYER_HEIGHT / 2, Axis.x)
             for point in pointsMinusX:
                 if getCollision(game.environment, point):
@@ -63,7 +76,7 @@ class Physics:
         elif game.player.velocity.x > 0:
             plusXPos = game.player.position.copy()
             plusXPos.x += PLAYER_RADIUS
-            plusXPos.z += PLAYER_HEIGHT / 2 + 0.00001  # Because float is not accurate enough
+            plusXPos.z += PLAYER_HEIGHT / 2 + 0.000001  # Because float is not accurate enough
             pointsPlusX = getRectanglePointsAroundPointVec3(plusXPos, PLAYER_RADIUS, PLAYER_HEIGHT / 2, Axis.x)
             for point in pointsPlusX:
                 if getCollision(game.environment, point):
@@ -78,7 +91,7 @@ class Physics:
         if game.player.velocity.y < 0:
             minusYPos = game.player.position.copy()
             minusYPos.y -= PLAYER_RADIUS
-            minusYPos.z += PLAYER_HEIGHT / 2 + 0.00001  # Because float is not accurate enough
+            minusYPos.z += PLAYER_HEIGHT / 2 + 0.000001  # Because float is not accurate enough
             pointsMinusY = getRectanglePointsAroundPointVec3(minusYPos, PLAYER_RADIUS, PLAYER_HEIGHT / 2, Axis.y)
             for point in pointsMinusY:
                 if getCollision(game.environment, point):
@@ -90,7 +103,7 @@ class Physics:
         elif game.player.velocity.y > 0:
             plusYPos = game.player.position.copy()
             plusYPos.y += PLAYER_RADIUS
-            plusYPos.z += PLAYER_HEIGHT / 2 + 0.00001  # Because float is not accurate enough
+            plusYPos.z += PLAYER_HEIGHT / 2 + 0.000001  # Because float is not accurate enough
             pointsPlusY = getRectanglePointsAroundPointVec3(plusYPos, PLAYER_RADIUS, PLAYER_HEIGHT / 2, Axis.y)
             for point in pointsPlusY:
                 if getCollision(game.environment, point):
