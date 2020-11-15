@@ -1,9 +1,10 @@
 from random import random
+
 import numpy as np
 
 from constants import MIN_TREE_HEIGHT, WORLD_SHAPE, MAX_TREE_HEIGHT, Blocks, JUMP_VELOCITY
 from structures import Vec3
-from utils import getCollisionsBottom, isStanding
+from utils import playerIsStanding
 
 
 def randNotInCenter(size: int, centerDiameter: int = 1):
@@ -97,5 +98,5 @@ class Game:
         pass
 
     def jump(self):
-        if isStanding(self.player.position, self.environment):
+        if playerIsStanding(self.player.position, self.environment):
             self.player.velocity.z = JUMP_VELOCITY

@@ -11,6 +11,8 @@ class Blocks:
 # Environment is 9x9x9 blocks -> 729 blocks in total
 WORLD_SHAPE = Vec3(9, 9, 9)
 
+PLAYER_RADIUS = 0.3
+
 MIN_TREE_HEIGHT = 5
 MAX_TREE_HEIGHT = 7
 

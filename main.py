@@ -1,7 +1,5 @@
 from time import time, sleep
 
-from vpython import keysdown
-
 from game import Game
 from physiscs import Physics
 from renderer import Renderer
@@ -31,7 +29,6 @@ def main():
     game = Game()
 
     renderer = Renderer()
-    physics = Physics()
 
     # input("Are you ready!")
 
@@ -47,7 +44,7 @@ def main():
 
             # print(f"Running next frame step with delta {WAIT_BETWEEN_FRAMES_TICKS / 10} ticks")
             for i in range(WAIT_BETWEEN_FRAMES_TICKS):
-                physics.step(game)
+                Physics.step(game)
 
             renderer.render(game)
 
