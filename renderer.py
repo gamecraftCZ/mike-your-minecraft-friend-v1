@@ -1,12 +1,10 @@
 from typing import List
 
-import numpy as np
 import vpython
 from vpython import vector as v
 
 from constants import WORLD_SHAPE
-from game import Player, Game
-
+from game import Game
 
 BLOCK_COLORS = {1: v(0.9, 0.7, 0.5), 2: v(0.8, 0.8, 0.4), 3: vpython.color.green}
 
@@ -26,7 +24,7 @@ class Renderer:
                         if old and old.color != color:
                             old.color = color
                         else:
-                            obj = vpython.box(pos=v(y + 0.5, z + 0.5, x + 0.5), size=v(1, 1, 1), color=color)
+                            obj = vpython.box(pos=v(x + 0.5, z + 0.5, y + 0.5), size=v(1, 1, 1), color=color)
                             self.blocks[z][y][x] = obj
                     elif old:
                         old.delete()
@@ -34,7 +32,7 @@ class Renderer:
 
     def render_player(self, game: Game):
         position = game.player.position
-        self.player.pos = v(position.y, position.z, position.x)
+        self.player.pos = v(position.x, position.z, position.y)
 
 
     def render(self, game: Game):

@@ -3,14 +3,14 @@ from typing import List
 
 import numpy as np
 
-from constants import WORLD_SHAPE, PLAYER_RADIUS
+from constants import WORLD_SHAPE, PLAYER_RADIUS, Blocks
 from structures import Vec2, Vec3, Axis
 
 
 def getCollisionsBottom(pos: Vec2) -> List[Vec2]:
-    points = getRectanglePointsAroundPointVec2(pos, PLAYER_RADIUS)
-    points = [point for point in points if 0 <= point.x < WORLD_SHAPE.x]
-    points = [point for point in points if 0 <= point.y < WORLD_SHAPE.y]
+    points = getRectanglePointsAroundPointVec2(pos, PLAYER_RADIUS, PLAYER_RADIUS)
+    points = [point.floor() for point in points if 0 <= point.x < WORLD_SHAPE.x]
+    points = [point.floor() for point in points if 0 <= point.y < WORLD_SHAPE.y]
     return points
 
 
@@ -39,19 +39,20 @@ def limit(number: int, minNumber: int, maxNumber: int):
     return min(number, maxNumber)
 
 
-def getRectanglePointsAroundPointVec2(point: Vec2, radius: int) -> List[Vec2]:
+def getRectanglePointsAroundPointVec2(point: Vec2, radiusX: int, radiusY) -> List[Vec2]:
+    # We use 0.00001 to prevent bad errors to happen. eg. 0.7 + 0.3 -> 1 (next block)
     return [
-        Vec2(point.x + radius, point.y + radius),
-        Vec2(point.x + radius, point.y - radius),
-        Vec2(point.x - radius, point.y + radius),
-        Vec2(point.x - radius, point.y - radius),
+        Vec2(point.x + radiusX - 0.00001, point.y + radiusY - 0.00001),
+        Vec2(point.x + radiusX - 0.00001, point.y - radiusY + 0.00001),
+        Vec2(point.x - radiusX + 0.00001, point.y + radiusY - 0.00001),
+        Vec2(point.x - radiusX + 0.00001, point.y - radiusY + 0.00001),
     ]
 
 
-def getRectanglePointsAroundPointVec3(point: Vec3, radius: int, lockedAxis: Axis):
+def getRectanglePointsAroundPointVec3(point: Vec3, radiusX: int, radiusY: int, lockedAxis: Axis):
     vec2 = point.toVec2(lockedAxis)
-    pointsVec2 = getRectanglePointsAroundPointVec2(vec2, radius)
-    return [Vec3.fromVec2(point, lockedAxis, point) for point in pointsVec2]
+    pointsVec2 = getRectanglePointsAroundPointVec2(vec2, radiusX, radiusY)
+    return [Vec3.fromVec2(p, lockedAxis, point) for p in pointsVec2]
 
 
 def getCollision(environment: np.ndarray, pos: Vec3) -> int:
@@ -60,9 +61,12 @@ def getCollision(environment: np.ndarray, pos: Vec3) -> int:
     :param environment: Game environment
     :param pos: Point positions
     """
-    posX = limit(math.floor(pos.x), 0, WORLD_SHAPE.x)
-    posY = limit(math.floor(pos.y), 0, WORLD_SHAPE.y)
-    posZ = limit(math.floor(pos.z), 0, WORLD_SHAPE.z)
+    posX = math.floor(pos.x)
+    posY = math.floor(pos.y)
+    posZ = math.floor(pos.z)
 
-    block = environment[posZ][posY][posX]
-    return block
+    if 0 <= posX < WORLD_SHAPE.x and 0 <= posY < WORLD_SHAPE.y and 0 <= posY < WORLD_SHAPE.y:
+        # Block is in environment
+        return environment[posZ][posY][posX]
+
+    return Blocks.AIR

@@ -1,3 +1,4 @@
+import math
 from enum import Enum
 
 
@@ -15,6 +16,11 @@ class Vec2:
         self.x = x
         self.y = y
 
+    def copy(self) -> 'Vec2':
+        return Vec2(self.x, self.y)
+
+    def floor(self) -> 'Vec2':
+        return Vec2(math.floor(self.x), math.floor(self.y))
 
 class Vec3:
     x: int or float = 0
@@ -50,3 +56,9 @@ class Vec3:
             return Vec3(vec2.x, ignoredValue, vec2.y)
         if ignoredAxis == Axis.z:
             return Vec3(vec2.x, vec2.y, ignoredValue)
+
+    def copy(self) -> 'Vec3':
+        return Vec3(self.x, self.y, self.z)
+
+    def floor(self) -> 'Vec3':
+        return Vec3(math.floor(self.x), math.floor(self.y), math.floor(self.z))

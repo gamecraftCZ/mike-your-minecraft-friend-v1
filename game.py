@@ -2,7 +2,7 @@ from random import random
 
 import numpy as np
 
-from constants import MIN_TREE_HEIGHT, WORLD_SHAPE, MAX_TREE_HEIGHT, Blocks, JUMP_VELOCITY
+from constants import MIN_TREE_HEIGHT, WORLD_SHAPE, MAX_TREE_HEIGHT, Blocks, JUMP_VELOCITY, WALK_VELOCITY
 from structures import Vec3
 from utils import playerIsStanding
 
@@ -28,7 +28,7 @@ class Player:
     def __init__(self):
         self.position.x = randNotInCenter(WORLD_SHAPE.x)  # 0-maxX, not in center
         self.position.y = randNotInCenter(WORLD_SHAPE.y)  # 0-maxY, not in center
-        self.position.z = 3
+        self.position.z = 2
 
         self.rotation.x = random()
         self.rotation.y = random()
@@ -85,17 +85,19 @@ class Game:
 
         print("Initialized Game")
 
-    def forward(self):
-        pass
+    # TODO account for player rotation in movement!
 
-    def backard(self):
-        pass
+    def forward(self):
+        self.player.velocity.x = -WALK_VELOCITY
+
+    def backward(self):
+        self.player.velocity.x = WALK_VELOCITY
 
     def left(self):
-        pass
+        self.player.velocity.y = WALK_VELOCITY
 
     def right(self):
-        pass
+        self.player.velocity.y = -WALK_VELOCITY
 
     def jump(self):
         if playerIsStanding(self.player.position, self.environment):

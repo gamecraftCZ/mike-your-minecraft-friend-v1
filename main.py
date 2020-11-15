@@ -4,14 +4,16 @@ from game import Game
 from physiscs import Physics
 from renderer import Renderer
 
-# TODO rework because step size is 0.2 tick now
+# TODO rework because step size is 0.1 tick now by default
 WAIT_BETWEEN_FRAMES_TICKS = 1  # should be 2 ticks
 WAIT_BETWEEN_FRAMES_SECONDS = WAIT_BETWEEN_FRAMES_TICKS / 20  # should be 0.1 s for 2 ticks
 
-ADDITIONAL_WAIT_SECONDS = 0.2  # To reduce lag in preview
+ADDITIONAL_WAIT_SECONDS = 0.05  # To reduce lag in preview
 
 
 def processKeyboardInput(game: Game, key: str):
+    print(f"Key input: '{key}'")
+
     if "a" in key:
         game.left()
     if "d" in key:
@@ -19,7 +21,7 @@ def processKeyboardInput(game: Game, key: str):
     if "w" in key:
         game.forward()
     if "s" in key:
-        game.backard()
+        game.backward()
     if " " in key:
         game.jump()
 
@@ -39,6 +41,8 @@ def main():
     renderer.canvas.bind("keydown", onKeyDown)
 
     try:
+        renderer.render(game)
+
         while True:
             startTime = time()
 
