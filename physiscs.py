@@ -4,7 +4,7 @@ from math import copysign
 from constants import GRAVITY, TERMINAL_VELOCITY, PLAYER_RADIUS, PLAYER_HEIGHT
 from game import Game
 from structures import Vec3, Axis
-from utils import getCollisionsBottom, playerIsStanding, getCollision, getRectanglePointsAroundPointVec3
+from utils import getCollisionsBottom, playerIsStanding, getCollision, getRectanglePointsAroundPointVec3, nthRoot
 
 
 class Physics:
@@ -19,7 +19,8 @@ class Physics:
     def _resolveGravity(game: Game, delta: float):
         ## region # Resolve gravity acceleration #
         game.player.velocity.z -= GRAVITY * delta
-        game.player.velocity.z *= 1 - (0.02 * delta)  # 0.98 -> https://www.mcpk.wiki/wiki/Vertical_Movement_Formulas
+        game.player.velocity.z *= nthRoot(0.98,
+                                          1 / delta)  # 0.98 -> https://www.mcpk.wiki/wiki/Vertical_Movement_Formulas
         if abs(game.player.velocity.z) > TERMINAL_VELOCITY:
             game.player.velocity.z = copysign(TERMINAL_VELOCITY, game.player.velocity.z)
         ## endregion #                           #
@@ -35,11 +36,13 @@ class Physics:
         for collision in collisions:
             block = getCollision(game.environment, Vec3(collision.x, collision.y, z))
             if block:
-                if int(posZ) > int(newZ):  # Only prevent falling into the block
+                if int(posZ) > int(newZ):  # Only prevents falling into the block
                     newZ = z + 1
                 game.player.velocity.z = 0
 
         game.player.position.z = newZ
+
+    # TODO Physics - Hitting head to ceiling
 
     @staticmethod
     def _resolveMovement(game: Game, delta: float):
@@ -98,7 +101,11 @@ class Physics:
 
     @staticmethod
     def _slowDownXYVelocity(game: Game, delta: float):
+        # Air slipperiness
+        game.player.velocity.x *= nthRoot(0.91, 1 / delta)  # 0.91 -> https://www.mcpk.wiki/wiki/Slipperiness
+        game.player.velocity.y *= nthRoot(0.91, 1 / delta)  # 0.91 -> https://www.mcpk.wiki/wiki/Slipperiness
+
         if playerIsStanding(game.player.position, game.environment):
-            print("TODO - _slowDownXYVelocity, this is provisional!!!")
-            game.player.velocity.x = 0
-            game.player.velocity.y = 0
+            # Block slipperiness
+            game.player.velocity.x *= nthRoot(0.6, 1 / delta)  # 0.6 -> https://www.mcpk.wiki/wiki/Slipperiness
+            game.player.velocity.y *= nthRoot(0.6, 1 / delta)  # 0.6 -> https://www.mcpk.wiki/wiki/Slipperiness

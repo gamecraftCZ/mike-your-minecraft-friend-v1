@@ -5,8 +5,7 @@ from game import Game
 from physiscs import Physics
 from renderer import Renderer
 
-# TODO rework because step size is 0.1 tick now by default
-WAIT_BETWEEN_FRAMES_TICKS = 1  # should be 2 ticks
+WAIT_BETWEEN_FRAMES_TICKS = 2  # should be 2 ticks
 WAIT_BETWEEN_FRAMES_SECONDS = WAIT_BETWEEN_FRAMES_TICKS / 20  # should be 0.1 s for 2 ticks
 
 ADDITIONAL_WAIT_SECONDS = 0.05  # To reduce lag in preview
@@ -58,8 +57,8 @@ def main():
             startTime = time()
 
             # print(f"Running next frame step with delta {WAIT_BETWEEN_FRAMES_TICKS / 10} ticks")
-            for i in range(WAIT_BETWEEN_FRAMES_TICKS):
-                Physics.step(game)
+            for i in range(WAIT_BETWEEN_FRAMES_TICKS * 10):
+                Physics.step(game, 0.1)
 
             renderer.render(game)
 

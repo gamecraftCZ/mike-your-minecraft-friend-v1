@@ -1,8 +1,12 @@
-## Player
+## Player physics
 https://minecraft.gamepedia.com/Player  
-https://minecraft.gamepedia.com/Entity#Motion_of_entities  
-https://github.com/ddevault/TrueCraft/wiki/Vertical-entity-movement#jumping
-https://www.mcpk.wiki/wiki/Vertical_Movement_Formulas
+https://minecraft.gamepedia.com/Entity#Motion_of_entities
+  
+https://www.mcpk.wiki/wiki/Vertical_Movement_Formulas  
+https://www.mcpk.wiki/wiki/Slipperiness  
+https://www.mcpk.wiki/wiki/Horizontal_Movement_Formulas  
+
+https://github.com/ddevault/TrueCraft/wiki/Vertical-entity-movement#jumping  
 
 ### size
 ***Height***: 1.8 block / 1.5 shifting block  
@@ -16,6 +20,9 @@ https://www.mcpk.wiki/wiki/Vertical_Movement_Formulas
 ***Max jump***: 1.2522 blocks  
 
 ***Jump acceleration***: Add 0.42 blocks / tick  
+
+***Ground slipperiness***: 0.6
+***Air slipperiness***: 0.91
 
 
 ## ML Resources

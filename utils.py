@@ -65,8 +65,14 @@ def getCollision(environment: np.ndarray, pos: Vec3) -> int:
     posY = math.floor(pos.y)
     posZ = math.floor(pos.z)
 
-    if 0 <= posX < WORLD_SHAPE.x and 0 <= posY < WORLD_SHAPE.y and 0 <= posY < WORLD_SHAPE.y:
+    if 0 <= posX < WORLD_SHAPE.x and 0 <= posY < WORLD_SHAPE.y and 0 <= posZ < WORLD_SHAPE.z:
         # Block is in environment
         return environment[posZ][posY][posX]
 
     return Blocks.AIR
+
+
+def nthRoot(number: float, exponent: float) -> float:
+    num = abs(number)
+    result = num ** (1 / float(exponent))
+    return math.copysign(result, number)
