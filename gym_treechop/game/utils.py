@@ -3,8 +3,8 @@ from typing import List
 
 import numpy as np
 
-from constants import WORLD_SHAPE, PLAYER_RADIUS, Blocks
-from structures import Vec2, Vec3, Axis
+from gym_treechop.game.constants import WORLD_SHAPE, PLAYER_RADIUS, Blocks
+from gym_treechop.game.structures import Vec2, Vec3, Axis
 
 
 def getCollisionsBottom(pos: Vec2) -> List[Vec2]:

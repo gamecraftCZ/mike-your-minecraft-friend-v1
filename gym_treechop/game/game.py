@@ -2,10 +2,12 @@ import math
 from random import random
 
 import numpy as np
+from tensorflow.python.keras.utils import to_categorical
 
-from constants import MIN_TREE_HEIGHT, WORLD_SHAPE, MAX_TREE_HEIGHT, Blocks, JUMP_VELOCITY, WALK_VELOCITY
-from structures import Vec3, Vec2
-from utils import playerIsStanding
+from gym_treechop.game.constants import MIN_TREE_HEIGHT, WORLD_SHAPE, MAX_TREE_HEIGHT, Blocks, JUMP_VELOCITY, \
+    WALK_VELOCITY, BLOCK_TYPES
+from gym_treechop.game.structures import Vec3, Vec2
+from gym_treechop.game.utils import playerIsStanding
 
 
 def randNotInCenter(size: int, centerDiameter: int = 1):
@@ -41,6 +43,9 @@ class Game:
     player: Player = Player()
     center: int = WORLD_SHAPE.x // 2
 
+    def getEnvironmentOneHotEncoded(self):
+        return to_categorical(self.environment.flatten(), num_classes=len(BLOCK_TYPES), dtype=np.uint8)
+
     def getWoodLeft(self):
         return np.count_nonzero(self.environment.flatten() == Blocks.WOOD)
 
@@ -74,6 +79,11 @@ class Game:
 
                 self.environment[height][self.center - y][self.center + x] = Blocks.LEAF
                 self.environment[height][self.center - y][self.center - x] = Blocks.LEAF
+
+    def isGameOver(self):
+        return (WORLD_SHAPE.x < self.player.position.x or self.player.position.x < 0
+                or WORLD_SHAPE.y < self.player.position.y or self.player.position.y < 0
+                or WORLD_SHAPE.z < self.player.position.z or self.player.position.z < 0)
 
     def __init__(self) -> None:
         self._generateGround()

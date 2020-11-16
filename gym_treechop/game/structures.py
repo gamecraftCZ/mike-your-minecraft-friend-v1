@@ -1,6 +1,8 @@
 import math
 from enum import Enum
 
+import numpy as np
+
 
 class Axis(Enum):
     x = 0
@@ -24,6 +26,10 @@ class Vec2:
 
     def __str__(self):
         return f"(x: {self.x / 1.0:.3}, y: {self.y / 1.0:.3})"
+
+    def toNumpy(self) -> np.array:
+        return np.array([self.x, self.y], dtype=np.float32)
+
 
 class Vec3:
     x: int or float = 0
@@ -68,3 +74,6 @@ class Vec3:
 
     def __str__(self):
         return f"(x: {self.x / 1.0:.3}, y: {self.y / 1.0:.3}, z: {self.z / 1.0:.3})"
+
+    def toNumpy(self) -> np.array:
+        return np.array([self.x, self.y, self.z], dtype=np.float32)

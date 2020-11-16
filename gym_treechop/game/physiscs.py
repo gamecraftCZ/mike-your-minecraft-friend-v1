@@ -1,10 +1,11 @@
 import math
 from math import copysign
 
-from constants import GRAVITY, TERMINAL_VELOCITY, PLAYER_RADIUS, PLAYER_HEIGHT, WORLD_SHAPE
-from game import Game
-from structures import Vec3, Axis
-from utils import getCollisionsBottom, playerIsStanding, getCollision, getRectanglePointsAroundPointVec3, nthRoot
+from gym_treechop.game.constants import GRAVITY, TERMINAL_VELOCITY, PLAYER_RADIUS, PLAYER_HEIGHT, WORLD_SHAPE
+from gym_treechop.game.game import Game
+from gym_treechop.game.structures import Vec3, Axis
+from gym_treechop.game.utils import getCollisionsBottom, playerIsStanding, getCollision, \
+    getRectanglePointsAroundPointVec3, nthRoot
 
 
 class Physics:
@@ -54,8 +55,6 @@ class Physics:
                 game.player.velocity.z = 0
 
         game.player.position.z = newZ
-
-    # TODO Physics - Hitting head to ceiling
 
     @staticmethod
     def _resolveMovement(game: Game, delta: float):

@@ -4,10 +4,11 @@ from typing import List
 import vpython
 from vpython import vector as v
 
-from constants import WORLD_SHAPE
-from game import Game
+from gym_treechop.game.constants import WORLD_SHAPE
+from gym_treechop.game.game import Game
 
 BLOCK_COLORS = {1: v(0.9, 0.7, 0.5), 2: v(0.8, 0.8, 0.4), 3: vpython.color.green}
+
 
 class Renderer:
     blocks: List[List[List[vpython.box]]] = []

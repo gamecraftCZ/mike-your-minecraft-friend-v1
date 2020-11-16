@@ -1,9 +1,9 @@
 import math
 from time import time, sleep
 
-from game import Game
-from physiscs import Physics
-from renderer import Renderer
+from gym_treechop.game.game import Game
+from gym_treechop.game.physiscs import Physics
+from gym_treechop.game.renderer import Renderer
 
 WAIT_BETWEEN_FRAMES_TICKS = 2  # should be 2 ticks
 WAIT_BETWEEN_FRAMES_SECONDS = WAIT_BETWEEN_FRAMES_TICKS / 20  # should be 0.1 s for 2 ticks

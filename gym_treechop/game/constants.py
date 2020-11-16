@@ -1,4 +1,4 @@
-from structures import Vec3
+from gym_treechop.game.structures import Vec3
 
 
 class Blocks:
@@ -7,6 +7,8 @@ class Blocks:
     WOOD = 2
     LEAF = 3
 
+
+BLOCK_TYPES = [0, 1, 2, 3]
 
 # Environment is 9x9x9 blocks -> 729 blocks in total
 WORLD_SHAPE = Vec3(9, 9, 9)
