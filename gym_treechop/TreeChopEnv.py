@@ -1,20 +1,25 @@
 import math
+from typing import List
 
 import gym
 import numpy as np
 from gym import spaces
 
-from gym_treechop.game.constants import WORLD_SHAPE, BLOCK_TYPES
+from gym_treechop.game.constants import WORLD_SHAPE, BLOCK_TYPES, Blocks
 from gym_treechop.game.game import Game
 from gym_treechop.game.physiscs import Physics
 from gym_treechop.game.renderer import Renderer
 
 
 class REWARDS:
-    TICK_PASSED = -0.1
-    WRONG_BLOCK_DESTROYED = -100
-    WOOD_CHOPPED = 1_000
-    DIED = -1_000_000
+    # Sweeties
+    WOOD_CHOPPED = 100
+    LOOKING_AT_WOOD = 0.5  # 10x time punishment
+
+    # Punishments
+    TICK_PASSED = -0.005
+    WRONG_BLOCK_DESTROYED = -1000
+    DIED = -10000
 
 
 DELTA = 0.1
@@ -60,12 +65,13 @@ class TreeChopEnv(gym.Env):
         self.game = Game()
         self.renderer = None
 
-    def step(self, action):
-        print("ACTION: ", action)
-        wood_left = self.game.getWoodLeft()
+    def step(self, action: List[float]):
+        # print("ACTION: ", action)
 
+        wood_left = self.game.getWoodLeft()
         obs = self._getObservation()
         done = self.game.isGameOver() or self.game.getWoodLeft() == 0
+
         reward = 0
 
         if not done:
@@ -84,15 +90,20 @@ class TreeChopEnv(gym.Env):
                 self.game.right()
 
             # Look
-            upDown = (self.game.player.rotation.y + 1) / 2 * math.pi  # 0-2 -> 0-PI
-            leftRight = (self.game.player.rotation.x + 1) * math.pi  # 0-2 -> 0-2PI
+            upDown = (action[4] + 1) / 2 * math.pi  # 0-2 -> 0-PI
+            leftRight = (action[5] + 1) * math.pi  # 0-2 -> 0-2PI
 
             self.game.player.rotation.y = upDown
             self.game.player.rotation.x = leftRight
 
             # Attack blocks
             if action[0]:
-                self.game.attackBlock(DELTA)
+                block = self.game.attackBlock(DELTA)
+                if block:
+                    if block == Blocks.WOOD:
+                        reward += REWARDS.WOOD_CHOPPED
+                    else:
+                        reward += REWARDS.WRONG_BLOCK_DESTROYED
             else:
                 self.game.stopBlockAttack()
 
@@ -102,16 +113,26 @@ class TreeChopEnv(gym.Env):
             if self.game.isGameOver():
                 reward += REWARDS.DIED
 
+            if self.game.getBlockInFrontOfPlayer() == Blocks.WOOD:
+                reward += REWARDS.LOOKING_AT_WOOD
+
             reward += REWARDS.TICK_PASSED
 
-            done = self.game.isGameOver() or self.game.getWoodLeft() == 0
+            wood_left = self.game.getWoodLeft()
+            obs = self._getObservation()
+            done = self.game.isGameOver() or wood_left == 0
 
         info = {"wood_left": wood_left}
+
+        # print("Obs: ", obs.tolist())
+        # if done:
+        #     print("DONE")
         return obs, reward, done, info
 
     def reset(self):
         del self.game
         self.game = Game()  # Create new game
+        return self._getObservation()
 
     def render(self, mode='human', close=False):
         if not self.renderer:
@@ -129,4 +150,4 @@ class TreeChopEnv(gym.Env):
         obs = np.append(obs, (self.game.player.rotation.x - math.pi) / math.pi)  # 0 - 2PI -> -1PI - 1PI
         obs = np.append(obs, (self.game.player.rotation.y - (math.pi / 2)) / (math.pi / 2))  # 0 - 1PI -> -0.5PI - 0.5PI
         obs = np.append(obs, self.game.player.velocity.toNumpy() / 3.92)  # Terminal velocity = 3.92
-        return obs
+        return obs.clip(-1, 1)

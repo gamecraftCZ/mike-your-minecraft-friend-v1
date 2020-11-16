@@ -50,7 +50,7 @@ class Physics:
             # Hitting head to ceiling detection
             blockTop = getCollision(game.environment, Vec3(collision.x, collision.y, zTop))
             if blockTop:
-                print("COLLISION top")
+                # print("COLLISION top")
                 newZ = zTop - PLAYER_HEIGHT - 0.00001  # Because float is not accurate enough
                 game.player.velocity.z = 0
 
@@ -68,7 +68,7 @@ class Physics:
             pointsMinusX = getRectanglePointsAroundPointVec3(minusXPos, PLAYER_RADIUS, PLAYER_HEIGHT / 2, Axis.x)
             for point in pointsMinusX:
                 if getCollision(game.environment, point):
-                    print("COLLISION front")
+                    # print("COLLISION front")
                     game.player.position.x = math.floor(point.x) + 1 + PLAYER_RADIUS
                     game.player.velocity.x = 0
                     break
@@ -79,7 +79,7 @@ class Physics:
             pointsPlusX = getRectanglePointsAroundPointVec3(plusXPos, PLAYER_RADIUS, PLAYER_HEIGHT / 2, Axis.x)
             for point in pointsPlusX:
                 if getCollision(game.environment, point):
-                    print("COLLISION back")
+                    # print("COLLISION back")
                     game.player.position.x = math.floor(point.x) - PLAYER_RADIUS
                     game.player.velocity.x = 0
                     break
@@ -94,7 +94,7 @@ class Physics:
             pointsMinusY = getRectanglePointsAroundPointVec3(minusYPos, PLAYER_RADIUS, PLAYER_HEIGHT / 2, Axis.y)
             for point in pointsMinusY:
                 if getCollision(game.environment, point):
-                    print("COLLISION right")
+                    # print("COLLISION right")
                     game.player.position.y = math.floor(point.y) + 1 + PLAYER_RADIUS
                     game.player.velocity.y = 0
                     break
@@ -106,7 +106,7 @@ class Physics:
             pointsPlusY = getRectanglePointsAroundPointVec3(plusYPos, PLAYER_RADIUS, PLAYER_HEIGHT / 2, Axis.y)
             for point in pointsPlusY:
                 if getCollision(game.environment, point):
-                    print("COLLISION left")
+                    # print("COLLISION left")
                     game.player.position.y = math.floor(point.y) - PLAYER_RADIUS
                     game.player.velocity.y = 0
                     break

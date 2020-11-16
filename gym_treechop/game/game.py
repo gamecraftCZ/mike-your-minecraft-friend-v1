@@ -116,7 +116,7 @@ class Game:
             self.player.position.x = randNotInCenter(WORLD_SHAPE.x, 5)  # 0-maxX, not 5 blocks around center
             self.player.position.y = randNotInCenter(WORLD_SHAPE.y, 5)  # 0-maxY, not 5 blocks around center
 
-        print("Initialized Game")
+        # print("Initialized Game")
 
     # region Player Movement
     def forward(self):
@@ -167,7 +167,7 @@ class Game:
 
     # Returns destroyed block id (AIR(0) if none)
     def attackBlock(self, delta: float) -> int:
-        block, coords = self._getBlockInFrontOfPlayer()
+        block, coords = self.getBlockInFrontOfPlayer()
         if coords != self.attackedBlockCoords:
             # Currently attacked block is no longer attacked
             self.stopBlockAttack()
@@ -183,7 +183,7 @@ class Game:
 
             self.attackTicksRemaining -= attackStrength
 
-            print(f"self.attackTicksRemaining: ", self.attackTicksRemaining)
+            # print(f"self.attackTicksRemaining: ", self.attackTicksRemaining)
 
             if self.attackTicksRemaining <= 0:
                 self._setBlock(coords, 0)
@@ -193,7 +193,7 @@ class Game:
     def stopBlockAttack(self):
         self.attackedBlockCoords = None
 
-    def _getBlockInFrontOfPlayer(self) -> (int, Vec3):
+    def getBlockInFrontOfPlayer(self) -> (int, Vec3):
         position = self.player.getHeadPosition()
         direction = self.player.getLookingDirectionVector()
 
@@ -223,9 +223,9 @@ class Game:
         toFullY = toFullY or copysign(1, toFullY)
         toFullZ = toFullZ or copysign(1, toFullZ)
 
-        relativeX = toFullX / direction.x
-        relativeY = toFullY / direction.y
-        relativeZ = toFullZ / direction.z
+        relativeX = toFullX / (direction.x or 0.00000000001)
+        relativeY = toFullY / (direction.y or 0.00000000001)
+        relativeZ = toFullZ / (direction.z or 0.00000000001)
 
         relativeMove = min(relativeX, relativeY, relativeZ)
 
