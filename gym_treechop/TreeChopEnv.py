@@ -12,6 +12,7 @@ from gym_treechop.game.renderer import Renderer
 
 class REWARDS:
     TICK_PASSED = -0.1
+    WRONG_BLOCK_DESTROYED = -100
     WOOD_CHOPPED = 1_000
     DIED = -1_000_000
 

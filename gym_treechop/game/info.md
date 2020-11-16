@@ -8,6 +8,9 @@ https://www.mcpk.wiki/wiki/Horizontal_Movement_Formulas
 
 https://github.com/ddevault/TrueCraft/wiki/Vertical-entity-movement#jumping  
 
+https://minecraft.gamepedia.com/Breaking  
+https://mcreator.net/wiki/list-hardness-values-blocks  
+
 ### size
 ***Height***: 1.8 block / 1.5 shifting block  
 ***Width***: 0.6 block
@@ -24,6 +27,19 @@ https://github.com/ddevault/TrueCraft/wiki/Vertical-entity-movement#jumping
 ***Ground slipperiness***: 0.6
 ***Air slipperiness***: 0.91
 
+### Chopping / Attacking
+***Range***: 4.5 blocks  
+***Hardness multiplier***: 1.5 / 4.5(when player could not destroy the block)  
+
+#### Mining Multipliers
+| Nothing | Wood | Stone | Iron | Diamond | Netherite | Gold |  
+| ------- | ---- | ----- | ---- | ------- | --------- | ---- |
+| 1x      | 2x   | 4x    | 6x   | 8x      | 9x        | 12x  |
+
+#### Blocks hardness
+| Dirt | Wood | Leaves |
+| ---- | ---- | ------ |
+| 0.5  | 2    | 0.2    |
 
 ## ML Resources
 [Baseline Rainbow MineRL agent on github](https://github.com/keisuke-nakata/minerl2020_submission)

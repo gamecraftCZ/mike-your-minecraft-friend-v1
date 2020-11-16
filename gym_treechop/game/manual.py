@@ -5,7 +5,7 @@ from gym_treechop.game.game import Game
 from gym_treechop.game.physiscs import Physics
 from gym_treechop.game.renderer import Renderer
 
-WAIT_BETWEEN_FRAMES_TICKS = 2  # should be 2 ticks
+WAIT_BETWEEN_FRAMES_TICKS = 1  # should be 1 tick
 WAIT_BETWEEN_FRAMES_SECONDS = WAIT_BETWEEN_FRAMES_TICKS / 20  # should be 0.1 s for 2 ticks
 
 ADDITIONAL_WAIT_SECONDS = 0.05  # To reduce lag in preview
@@ -36,11 +36,13 @@ def processKeyboardInput(game: Game, key: str):
         game.jump()
 
 
+mouseDown = False
 def main():
+    global mouseDown
     print("Hi")
-    game = Game()
 
     renderer = Renderer()
+    game = Game(renderer)
 
     # input("Are you ready!")
 
@@ -49,6 +51,19 @@ def main():
         processKeyboardInput(game, k)
 
     renderer.canvas.bind("keydown", onKeyDown)
+
+    def onMouseDown():
+        global mouseDown
+        mouseDown = True
+        print("MouseDown")
+
+    def onMouseUp():
+        global mouseDown
+        mouseDown = False
+        print("MouseUp")
+
+    renderer.canvas.bind("mousedown", onMouseDown)
+    renderer.canvas.bind("mouseup", onMouseUp)
 
     try:
         renderer.render(game)
@@ -59,6 +74,12 @@ def main():
             # print(f"Running next frame step with delta {WAIT_BETWEEN_FRAMES_TICKS / 10} ticks")
             for i in range(WAIT_BETWEEN_FRAMES_TICKS * 10):
                 Physics.step(game, 0.1)
+                if mouseDown:
+                    block = game.attackBlock(0.1)
+                    if block:
+                        print("Destroyed: ", block)
+                else:
+                    game.stopBlockAttack()
 
             renderer.render(game)
 

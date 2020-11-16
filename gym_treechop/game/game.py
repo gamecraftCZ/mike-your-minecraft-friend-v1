@@ -1,11 +1,12 @@
 import math
+from math import copysign
 from random import random
 
 import numpy as np
 from tensorflow.python.keras.utils import to_categorical
 
 from gym_treechop.game.constants import MIN_TREE_HEIGHT, WORLD_SHAPE, MAX_TREE_HEIGHT, Blocks, JUMP_VELOCITY, \
-    WALK_VELOCITY, BLOCK_TYPES
+    WALK_VELOCITY, BLOCK_TYPES, BlockHardness, HARDNESS_MULTIPLIER, BREAKING_RANGE
 from gym_treechop.game.structures import Vec3, Vec2
 from gym_treechop.game.utils import playerIsStanding
 
@@ -36,6 +37,18 @@ class Player:
         self.rotation.x = random() * 2 * math.pi
         self.rotation.y = random() * math.pi
 
+    def getHeadPosition(self) -> Vec3:
+        return Vec3(self.position.x, self.position.y, self.position.z + 1)
+
+    def getLookingDirectionVector(self) -> Vec3:
+        y = math.sin(self.rotation.x)
+        x = math.cos(self.rotation.x)
+
+        z = math.sin(self.rotation.y - math.pi / 2)
+        zRot = math.cos(self.rotation.y - math.pi / 2)
+
+        return Vec3(x * zRot, y * zRot, z)
+
 
 class Game:
     # environment[z, y, x]
@@ -49,6 +62,7 @@ class Game:
     def getWoodLeft(self):
         return np.count_nonzero(self.environment.flatten() == Blocks.WOOD)
 
+    # region Environment Generation
     def _generateGround(self):
         for x in range(WORLD_SHAPE.x):
             for y in range(WORLD_SHAPE.y):
@@ -80,12 +94,16 @@ class Game:
                 self.environment[height][self.center - y][self.center + x] = Blocks.LEAF
                 self.environment[height][self.center - y][self.center - x] = Blocks.LEAF
 
+    # endregion
+
     def isGameOver(self):
         return (WORLD_SHAPE.x < self.player.position.x or self.player.position.x < 0
                 or WORLD_SHAPE.y < self.player.position.y or self.player.position.y < 0
                 or WORLD_SHAPE.z < self.player.position.z or self.player.position.z < 0)
 
-    def __init__(self) -> None:
+    def __init__(self, renderer=None) -> None:
+        self.renderer = renderer
+
         self._generateGround()
 
         treeHeight = self._generateTree()
@@ -95,6 +113,7 @@ class Game:
 
         print("Initialized Game")
 
+    # region Player Movement
     def forward(self):
         x = math.cos(self.player.rotation.x)
         y = math.sin(self.player.rotation.x)
@@ -131,6 +150,116 @@ class Game:
     def lookLeftRight(self, radian: float):
         self.player.rotation.x = radian
 
-    # 0 - 360 degrees -> 0 - 2PI rad
+    # 0 - 180 degrees -> 0 - 1PI rad
     def lookUpDown(self, radian: float):
         self.player.rotation.y = radian
+
+    # endregion
+
+    # region Breaking Blocks
+    attackedBlockCoords: Vec3 or None = None  # Which block is being attacked
+    attackTicksRemaining: int = 0  # How long is the block being attacked in Ticks
+
+    # Returns destroyed block id (AIR(0) if none)
+    def attackBlock(self, delta: float) -> int:
+        block, coords = self._getBlockInFrontOfPlayer()
+        if coords != self.attackedBlockCoords:
+            # Currently attacked block is no longer attacked
+            self.stopBlockAttack()
+        if block:
+            if not self.attackedBlockCoords:
+                self.attackedBlockCoords = coords
+                self.attackTicksRemaining = BlockHardness[block] * HARDNESS_MULTIPLIER * 20
+
+            # Some block is attacked
+            attackStrength = 1 * delta
+            if not playerIsStanding(self.player.position, self.environment):
+                attackStrength /= 5
+
+            self.attackTicksRemaining -= attackStrength
+
+            print(f"self.attackTicksRemaining: ", self.attackTicksRemaining)
+
+            if self.attackTicksRemaining <= 0:
+                self._setBlock(coords, 0)
+                print("Destroyed Coords: ", coords)
+                return block
+
+    def stopBlockAttack(self):
+        self.attackedBlockCoords = None
+
+    def _getBlockInFrontOfPlayer(self) -> (int, Vec3):
+        position = self.player.getHeadPosition()
+        direction = self.player.getLookingDirectionVector()
+
+        blockPos = self.__getNextBlock(position, direction)
+        while True:
+            if not self._isInEnvironment(blockPos):
+                return 0, None
+
+            if position.getLengthTo(blockPos) > BREAKING_RANGE:
+                return 0, None
+
+            if self._getBlock(blockPos) != 0:
+                # self._setBlock(blockPos, 0)  # DEBUG
+                return self._getBlock(blockPos), blockPos.floor()
+
+            # self._setBlock(blockPos, Blocks.WOOD) # DEBUG
+            # self.renderer.render(self) # DEBUG
+            blockPos = self.__getNextBlock(blockPos, direction)
+
+    @staticmethod
+    def __getNextBlock(position: Vec3, direction: Vec3) -> Vec3:
+        toFullX = copysign((copysign(1 - (position.x % 1), direction.x) % 1), direction.x)
+        toFullY = copysign((copysign(1 - (position.y % 1), direction.y) % 1), direction.y)
+        toFullZ = copysign((copysign(1 - (position.z % 1), direction.z) % 1), direction.z)
+
+        toFullX = toFullX or copysign(1, toFullX)
+        toFullY = toFullY or copysign(1, toFullY)
+        toFullZ = toFullZ or copysign(1, toFullZ)
+
+        relativeX = toFullX / direction.x
+        relativeY = toFullY / direction.y
+        relativeZ = toFullZ / direction.z
+
+        relativeMove = min(relativeX, relativeY, relativeZ)
+
+        moved = position.copy()
+        moved.x += direction.x * relativeMove
+        moved.y += direction.y * relativeMove
+        moved.z += direction.z * relativeMove
+
+        if relativeMove == relativeX:
+            moved.x = float(round(moved.x))
+        if relativeMove == relativeY:
+            moved.y = float(round(moved.y))
+        if relativeMove == relativeZ:
+            moved.z = float(round(moved.z))
+
+        return moved
+
+    # endregion
+
+    def _isInEnvironment(self, pos: Vec3):
+        pos = pos.floor()
+        if (WORLD_SHAPE.x <= pos.x or pos.x < 0
+                or WORLD_SHAPE.y <= pos.y or pos.y < 0
+                or WORLD_SHAPE.z <= pos.z or pos.z < 0):
+            return False
+        else:
+            return True
+
+    def _getBlock(self, pos: Vec3) -> int:
+        pos = pos.floor()
+        if self._isInEnvironment(pos):
+            return self.environment[pos.z, pos.y, pos.x]
+        else:
+            return 0
+
+    def _setBlock(self, pos: Vec3, block: int) -> bool:
+        pos = pos.floor()
+        if self._isInEnvironment(pos):
+            self.environment[pos.z, pos.y, pos.x] = block
+            return True
+        else:
+            return False

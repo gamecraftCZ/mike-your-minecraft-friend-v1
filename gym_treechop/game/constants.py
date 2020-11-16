@@ -8,7 +8,18 @@ class Blocks:
     LEAF = 3
 
 
+BlockHardness = {  # Default seconds required to break
+    Blocks.AIR: 0,
+    Blocks.GROUND: 0.5,
+    Blocks.WOOD: 2,
+    Blocks.LEAF: 0.2
+}
 BLOCK_TYPES = [0, 1, 2, 3]
+
+BREAKING_RANGE = 4.5  # Blocks
+
+HARDNESS_MULTIPLIER = 1.5
+NOT_STANDING_BREAK_SLOWDOWN = 5  # When not standing the block is broken 5x longer
 
 # Environment is 9x9x9 blocks -> 729 blocks in total
 WORLD_SHAPE = Vec3(9, 9, 9)
@@ -17,7 +28,7 @@ PLAYER_RADIUS = 0.3
 PLAYER_HEIGHT = 1.8
 
 MIN_TREE_HEIGHT = 5
-MAX_TREE_HEIGHT = 7
+MAX_TREE_HEIGHT = 6  # 7 might be undestroyable in some situations without building blocks
 
 GRAVITY = 0.08  # Blocks / 1 tick^2
 
