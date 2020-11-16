@@ -17,6 +17,7 @@ class REWARDS:
     DIED = -1_000_000
 
 
+DELTA = 0.1
 class TreeChopEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
@@ -60,6 +61,7 @@ class TreeChopEnv(gym.Env):
         self.renderer = None
 
     def step(self, action):
+        print("ACTION: ", action)
         wood_left = self.game.getWoodLeft()
 
         obs = self._getObservation()
@@ -67,7 +69,7 @@ class TreeChopEnv(gym.Env):
         reward = 0
 
         if not done:
-            # print("Doing action: ", action)
+            # Move
             if action[1] > 0.5:  # Jump
                 self.game.jump()
 
@@ -81,16 +83,21 @@ class TreeChopEnv(gym.Env):
             if action[3] < -0.5:  # Right
                 self.game.right()
 
+            # Look
             upDown = (self.game.player.rotation.y + 1) / 2 * math.pi  # 0-2 -> 0-PI
             leftRight = (self.game.player.rotation.x + 1) * math.pi  # 0-2 -> 0-2PI
 
             self.game.player.rotation.y = upDown
             self.game.player.rotation.x = leftRight
 
-            # TODO Attack action
+            # Attack blocks
+            if action[0]:
+                self.game.attackBlock(DELTA)
+            else:
+                self.game.stopBlockAttack()
 
-            for i in range(10):  # 0.1*10 = 1tick
-                Physics.step(self.game, 0.1)
+            for i in range(int(1 / DELTA)):  # 0.1*10 = 1tick
+                Physics.step(self.game, DELTA)
 
             if self.game.isGameOver():
                 reward += REWARDS.DIED
@@ -103,6 +110,7 @@ class TreeChopEnv(gym.Env):
         return obs, reward, done, info
 
     def reset(self):
+        del self.game
         self.game = Game()  # Create new game
 
     def render(self, mode='human', close=False):

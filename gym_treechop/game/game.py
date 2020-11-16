@@ -52,8 +52,8 @@ class Player:
 
 class Game:
     # environment[z, y, x]
-    environment: np.ndarray = np.zeros((WORLD_SHAPE.z, WORLD_SHAPE.y, WORLD_SHAPE.x), dtype=np.uint8)
-    player: Player = Player()
+    environment: np.ndarray
+    player: Player
     center: int = WORLD_SHAPE.x // 2
 
     def getEnvironmentOneHotEncoded(self):
@@ -103,6 +103,11 @@ class Game:
 
     def __init__(self, renderer=None) -> None:
         self.renderer = renderer
+        self.environment = np.zeros((WORLD_SHAPE.z, WORLD_SHAPE.y, WORLD_SHAPE.x), dtype=np.uint8)
+        self.player = Player()
+
+        self.attackedBlockCoords = None
+        self.attackTicksRemaining = 0
 
         self._generateGround()
 
@@ -157,8 +162,8 @@ class Game:
     # endregion
 
     # region Breaking Blocks
-    attackedBlockCoords: Vec3 or None = None  # Which block is being attacked
-    attackTicksRemaining: int = 0  # How long is the block being attacked in Ticks
+    attackedBlockCoords: Vec3 or None  # Which block is being attacked
+    attackTicksRemaining: int  # How long is the block being attacked in Ticks
 
     # Returns destroyed block id (AIR(0) if none)
     def attackBlock(self, delta: float) -> int:

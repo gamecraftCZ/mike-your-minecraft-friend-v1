@@ -19,13 +19,15 @@ def main():
     print("################ TEST: ##################")
     print("#########################################")
     obs = env.reset()
-    for i in range(2000):  # 2000ticks = 100seconds game
+    for i in range(20_000):  # 20_000 ticks = 1_000 seconds game
         # action, _states = model.predict(obs)
         action = env.action_space.sample()
         obs, rewards, done, info = env.step(action)
         if round(rewards):
             print(f"Reward: {rewards}, done: {done}, info: {info}")
         env.render()
+        if done:
+            env.reset()
         sleep(0.1)
 
     env.close()
