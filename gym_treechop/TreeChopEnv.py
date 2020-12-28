@@ -13,16 +13,24 @@ from gym_treechop.game.renderer import Renderer
 
 class REWARDS:
     # Sweeties
-    WOOD_CHOPPED = 100
-    LOOKING_AT_WOOD = 0.5  # 10x time punishment
+    WOOD_CHOPPED = 1000
+    LOOKING_AT_WOOD = 50  # 10x time punishment ???
+    WOOD_CHOPPING_PER_TICK = 5  # Up to reward x*10 = 20 ???
+    BEING_CLOSE_TO_TREE = 8  # 0.05  # For closer each block closer to the center ???
 
     # Punishments
-    TICK_PASSED = -0.005
-    WRONG_BLOCK_DESTROYED = -1000
-    DIED = -10000
+    TICK_PASSED = 0  # -0.004
+    WRONG_BLOCK_DESTROYED = -100
+    DIED = -1_000  # -10_000
 
 
 DELTA = 0.1
+MAX_GAME_LENGTH_STEPS = 100  # 10s
+
+
+# MAX_GAME_LENGTH_STEPS = 300  # 30s
+# MAX_GAME_LENGTH_STEPS = 500  # 50s
+
 class TreeChopEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
@@ -63,14 +71,25 @@ class TreeChopEnv(gym.Env):
         self.observation_space = spaces.Box(low=-1, high=1, shape=(observations_count,), dtype=np.float32)
 
         self.game = Game()
+        self.state = self._getDefaultState()
         self.renderer = None
+
+    def _getDefaultState(self):
+        return {"center": self.game.getPlayerDistanceToCenter(),
+                "look": False,
+                "chopping_reward": 0,
+                "steps_passed": 0, }
+
+    def _isDone(self) -> bool:
+        return self.game.isGameOver() \
+               or self.game.getWoodLeft() == 0 \
+               or self.state["steps_passed"] >= MAX_GAME_LENGTH_STEPS
 
     def step(self, action: List[float]):
         # print("ACTION: ", action)
-
         wood_left = self.game.getWoodLeft()
         obs = self._getObservation()
-        done = self.game.isGameOver() or self.game.getWoodLeft() == 0
+        done = self._isDone()
 
         reward = 0
 
@@ -96,42 +115,90 @@ class TreeChopEnv(gym.Env):
             self.game.player.rotation.y = upDown
             self.game.player.rotation.x = leftRight
 
-            # Attack blocks
+            # Physics
+            for i in range(int(1 / DELTA)):  # 0.1*10 = 1tick
+                Physics.step(self.game, DELTA)
+
+            # Attack blocks, REWARD +- wood chopped, wrong block destroyed
             if action[0]:
                 block = self.game.attackBlock(DELTA)
                 if block:
                     if block == Blocks.WOOD:
                         reward += REWARDS.WOOD_CHOPPED
+                        self.state["chopping_reward"] = 0
+                        wood_left = self.game.getWoodLeft()
+                        # wood_left = 0 # TODO remove this line, makes the AI to choop only 1 wood
+                        print("Chopped ALL WOOD Block")
+                    elif block == Blocks.LEAF:
+                        pass
                     else:
                         reward += REWARDS.WRONG_BLOCK_DESTROYED
             else:
                 self.game.stopBlockAttack()
 
-            for i in range(int(1 / DELTA)):  # 0.1*10 = 1tick
-                Physics.step(self.game, DELTA)
-
+            # REWARD - game over
             if self.game.isGameOver():
                 reward += REWARDS.DIED
 
-            if self.game.getBlockInFrontOfPlayer() == Blocks.WOOD:
-                reward += REWARDS.LOOKING_AT_WOOD
+            # REWARD +- looking at wood, chopping wood
+            block, blockPosition = self.game.getBlockInFrontOfPlayer()
+            # if block:
+            #     print("Looking at: ", Blocks.toName(block))
 
+            if block == Blocks.WOOD:
+                if not self.state["look"]:
+                    reward += REWARDS.LOOKING_AT_WOOD
+                    print("WOOD look!")
+                self.state["look"] = True
+
+                if self.game.attackTicksRemaining > 0:
+                    rewardToGet = max(0, (40 - self.game.attackTicksRemaining)) * REWARDS.WOOD_CHOPPING_PER_TICK
+                    reward += rewardToGet
+                    self.state["chopping_reward"] += rewardToGet
+                    print("Hit Wood")
+
+            else:
+                if self.state["look"]:
+                    reward -= REWARDS.LOOKING_AT_WOOD
+                    self.state["look"] = False
+                    print("No Wood look!")
+
+            if self.game.attackTicksRemaining <= 0:
+                # stopped chopping
+                if self.state["chopping_reward"]:
+                    print("UnHit Wood")
+                reward -= self.state["chopping_reward"]
+                self.state["chopping_reward"] = 0
+
+            # REWARD + moving to the center
+            newDistanceToCenter = self.game.getPlayerDistanceToCenter()
+            distanceChange = self.state["center"] - newDistanceToCenter
+            reward += (distanceChange * REWARDS.BEING_CLOSE_TO_TREE)
+
+            self.state["center"] = newDistanceToCenter
+
+            # REWARD - time passes
             reward += REWARDS.TICK_PASSED
 
-            wood_left = self.game.getWoodLeft()
+            # New observation
+            # wood_left = self.game.getWoodLeft()
             obs = self._getObservation()
-            done = self.game.isGameOver() or wood_left == 0
+            done = self._isDone()
 
         info = {"wood_left": wood_left}
 
         # print("Obs: ", obs.tolist())
         # if done:
         #     print("DONE")
+
+        self.state["steps_passed"] += 1
+
         return obs, reward, done, info
 
     def reset(self):
         del self.game
         self.game = Game()  # Create new game
+        self.state = self._getDefaultState()
         return self._getObservation()
 
     def render(self, mode='human', close=False):

@@ -7,7 +7,7 @@ from tensorflow.python.keras.utils import to_categorical
 
 from gym_treechop.game.constants import MIN_TREE_HEIGHT, WORLD_SHAPE, MAX_TREE_HEIGHT, Blocks, JUMP_VELOCITY, \
     WALK_VELOCITY, BLOCK_TYPES, BlockHardness, HARDNESS_MULTIPLIER, BREAKING_RANGE
-from gym_treechop.game.structures import Vec3, Vec2
+from gym_treechop.game.structures import Vec3, Vec2, Axis
 from gym_treechop.game.utils import playerIsStanding
 
 
@@ -17,7 +17,7 @@ def randNotInCenter(size: int, centerDiameter: int = 1):
     if centerDiameter > center:
         centerDiameter = center
 
-    move = centerDiameter + random() * (center - centerDiameter)
+    move = centerDiameter + random() * (center - centerDiameter - 1)
     if random() > 0.5:
         move = -move
 
@@ -56,11 +56,19 @@ class Game:
     player: Player
     center: int = WORLD_SHAPE.x // 2
 
+    oneHotEncodedCache = None
+    woodLeftCache = None
+
     def getEnvironmentOneHotEncoded(self):
-        return to_categorical(self.environment.flatten(), num_classes=len(BLOCK_TYPES), dtype=np.uint8)
+        if self.oneHotEncodedCache is None:
+            self.oneHotEncodedCache = to_categorical(self.environment.flatten(), num_classes=len(BLOCK_TYPES),
+                                                     dtype=np.uint8)
+        return self.oneHotEncodedCache
 
     def getWoodLeft(self):
-        return np.count_nonzero(self.environment.flatten() == Blocks.WOOD)
+        if self.woodLeftCache is None:
+            self.woodLeftCache = np.count_nonzero(self.environment.flatten() == Blocks.WOOD)
+        return self.woodLeftCache
 
     # region Environment Generation
     def _generateGround(self):
@@ -264,7 +272,16 @@ class Game:
     def _setBlock(self, pos: Vec3, block: int) -> bool:
         pos = pos.floor()
         if self._isInEnvironment(pos):
-            self.environment[pos.z, pos.y, pos.x] = block
+            if self.environment[pos.z, pos.y, pos.x] != block:
+                self.environment[pos.z, pos.y, pos.x] = block
+                self.oneHotEncodedCache = None
+                if block == Blocks.WOOD:
+                    self.woodLeftCache = None
             return True
         else:
             return False
+
+    def getPlayerDistanceToCenter(self) -> float:
+        center = Vec2(self.center, self.center)
+        toCenter = self.player.position.toVec2(Axis.z).getLengthTo(center)
+        return toCenter

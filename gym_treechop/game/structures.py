@@ -30,6 +30,11 @@ class Vec2:
     def toNumpy(self) -> np.array:
         return np.array([self.x, self.y], dtype=np.float32)
 
+    def getLengthTo(self, point: 'Vec2') -> float:
+        lengthX = self.x - point.x
+        lengthY = self.y - point.y
+        return math.sqrt(lengthX ** 2 + lengthY ** 2)
+
     def __eq__(self, other: 'Vec2'):
         if isinstance(other, Vec2):
             return self.x == other.x and self.y == other.y
@@ -86,7 +91,7 @@ class Vec3:
     def toNumpy(self) -> np.array:
         return np.array([self.x, self.y, self.z], dtype=np.float32)
 
-    def getLengthTo(self, point: 'Vec3'):
+    def getLengthTo(self, point: 'Vec3') -> float:
         lengthX = self.x - point.x
         lengthY = self.y - point.y
         lengthZ = self.z - point.z
