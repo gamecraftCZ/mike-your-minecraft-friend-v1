@@ -34,7 +34,7 @@ def playerIsStanding(position: Vec3, environment: np.ndarray) -> bool:
     return False
 
 
-def limit(number: int, minNumber: int, maxNumber: int):
+def limit(number: int or float, minNumber: int or float, maxNumber: int or float):
     number = max(number, minNumber)
     return min(number, maxNumber)
 

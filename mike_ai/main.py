@@ -52,14 +52,14 @@ def main():
         env=env,
         # n_steps=512,
         nminibatches=1,
-        learning_rate=lambda f: f * 2.5e-4,  # 2.5e-4,  #
+        # learning_rate=lambda f: (f+0.5)**3 * 2.5e-3,  # 2.5e-4,  #
         tensorboard_log="./ppo2_tensorboard/",
-        verbose=1
+        verbose=1,
     )
 
     TIMESTAMPS = 200_000  # _000
     # model.load("trained_PPO31.model")
-    # model = PPO2.load("trained_PPO31.model", env)
+    # model = PPO2.load("trained_PPO53.model", env)
     model.learn(total_timesteps=TIMESTAMPS)
     model.save(f"trained_{int(time())}_{TIMESTAMPS}.model")
 

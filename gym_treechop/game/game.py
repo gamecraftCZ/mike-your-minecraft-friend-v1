@@ -201,8 +201,9 @@ class Game:
     def stopBlockAttack(self):
         self.attackedBlockCoords = None
 
-    def getBlockInFrontOfPlayer(self) -> (int, Vec3):
-        position = self.player.getHeadPosition()
+    def getBlockInFrontOfPlayer(self, zPos: float = 1, lookingRange: float = BREAKING_RANGE) -> (int, Vec3):
+        # position = self.player.getHeadPosition()
+        position = Vec3(self.player.position.x, self.player.position.y, self.player.position.z + zPos)
         direction = self.player.getLookingDirectionVector()
 
         blockPos = self.__getNextBlock(position, direction)
@@ -210,7 +211,7 @@ class Game:
             if not self._isInEnvironment(blockPos):
                 return 0, None
 
-            if position.getLengthTo(blockPos) > BREAKING_RANGE:
+            if position.getLengthTo(blockPos) > lookingRange:
                 return 0, None
 
             if self._getBlock(blockPos) != 0:

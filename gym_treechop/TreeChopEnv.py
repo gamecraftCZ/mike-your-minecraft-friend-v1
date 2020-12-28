@@ -5,10 +5,11 @@ import gym
 import numpy as np
 from gym import spaces
 
-from gym_treechop.game.constants import WORLD_SHAPE, BLOCK_TYPES, Blocks
+from gym_treechop.game.constants import WORLD_SHAPE, Blocks
 from gym_treechop.game.game import Game
 from gym_treechop.game.physiscs import Physics
 from gym_treechop.game.renderer import Renderer
+from gym_treechop.game.utils import limit
 
 
 class REWARDS:
@@ -19,13 +20,14 @@ class REWARDS:
     BEING_CLOSE_TO_TREE = 8  # 0.05  # For closer each block closer to the center ???
 
     # Punishments
-    TICK_PASSED = 0  # -0.004
+    TICK_PASSED = -0.004
     WRONG_BLOCK_DESTROYED = -100
-    DIED = -1_000  # -10_000
+    DIED = -100  # -10_000
 
 
 DELTA = 0.1
-MAX_GAME_LENGTH_STEPS = 100  # 10s
+# MAX_GAME_LENGTH_STEPS = 100  # 10s
+MAX_GAME_LENGTH_STEPS = 50  # 5s
 
 
 # MAX_GAME_LENGTH_STEPS = 300  # 30s
@@ -65,9 +67,11 @@ class TreeChopEnv(gym.Env):
         #     # Player rotation
         #     spaces.Box(low=0, high=1, shape=(2,), dtype=np.float32),
         # ))
-        world_size = WORLD_SHAPE.x * WORLD_SHAPE.y * WORLD_SHAPE.z * len(BLOCK_TYPES)  # one-hot encoded
+        world_size = 0  # WORLD_SHAPE.x * WORLD_SHAPE.y * WORLD_SHAPE.z * len(BLOCK_TYPES)  # one-hot encoded
         player_observations = 3 + 3 + 2  # position, velocity, rotation
-        observations_count = world_size + player_observations
+        looking_at_block_one_hot = 4  # air, ground, wood, leaf
+        kicking_blocks = 1  # true/false
+        observations_count = world_size + player_observations + looking_at_block_one_hot + kicking_blocks
         self.observation_space = spaces.Box(low=-1, high=1, shape=(observations_count,), dtype=np.float32)
 
         self.game = Game()
@@ -98,22 +102,29 @@ class TreeChopEnv(gym.Env):
             if action[1] > 0.5:  # Jump
                 self.game.jump()
 
-            if action[2] < -0.5:  # Backward
-                self.game.backward()
-            if action[2] > 0.5:  # Forward
+            # if action[2] < -0.5:  # Backward
+            #     self.game.backward()
+            if action[2] > -0.5:  # .5:  # Forward
                 self.game.forward()
 
-            if action[3] < -0.5:  # Left
-                self.game.left()
-            if action[3] < -0.5:  # Right
-                self.game.right()
+            # if action[3] < -0.5:  # Left
+            #     self.game.left()
+            # if action[3] < -0.5:  # Right
+            #     self.game.right()
 
-            # Look
-            upDown = (action[4] + 1) / 2 * math.pi  # 0-2 -> 0-PI
-            leftRight = (action[5] + 1) * math.pi  # 0-2 -> 0-2PI
+            # Look - continuous
+            upDown = self.game.player.rotation.y + (action[4] / 8)  # -1 to 1 -> 0-1PI
+            leftRight = self.game.player.rotation.x + (action[5] / 8)  # -1 to 1 -> 0-2PI
 
-            self.game.player.rotation.y = upDown
-            self.game.player.rotation.x = leftRight
+            self.game.player.rotation.y = limit(upDown, 0, math.pi)
+            self.game.player.rotation.x = limit(leftRight, 0, 2 * math.pi)
+
+            # Look - exact
+            # upDown = (action[4] + 1) / 2 * math.pi  # 0-2 -> 0-1PI
+            # leftRight = (action[5] + 1) * math.pi  # 0-2 -> 0-2PI
+            #
+            # self.game.player.rotation.y = upDown
+            # self.game.player.rotation.x = leftRight
 
             # Physics
             for i in range(int(1 / DELTA)):  # 0.1*10 = 1tick
@@ -128,7 +139,7 @@ class TreeChopEnv(gym.Env):
                         self.state["chopping_reward"] = 0
                         wood_left = self.game.getWoodLeft()
                         # wood_left = 0 # TODO remove this line, makes the AI to choop only 1 wood
-                        print("Chopped ALL WOOD Block")
+                        print("Chopped FULL WOOD Block")
                     elif block == Blocks.LEAF:
                         pass
                     else:
@@ -212,9 +223,27 @@ class TreeChopEnv(gym.Env):
         self.renderer = None
 
     def _getObservation(self):
-        obs = self.game.getEnvironmentOneHotEncoded().flatten()
-        obs = np.append(obs, self.game.player.position.toNumpy() / max(WORLD_SHAPE.x, WORLD_SHAPE.y, WORLD_SHAPE.z))
+        obs = np.array([])  # self.game.getEnvironmentOneHotEncoded().flatten()
+
+        # Player position (-0.5 - 0.5), rotation, velocity
+        obs = np.append(obs,
+                        self.game.player.position.toNumpy() / max(WORLD_SHAPE.x, WORLD_SHAPE.y, WORLD_SHAPE.z) - [.5,
+                                                                                                                  .5,
+                                                                                                                  .5])
         obs = np.append(obs, (self.game.player.rotation.x - math.pi) / math.pi)  # 0 - 2PI -> -1PI - 1PI
         obs = np.append(obs, (self.game.player.rotation.y - (math.pi / 2)) / (math.pi / 2))  # 0 - 1PI -> -0.5PI - 0.5PI
         obs = np.append(obs, self.game.player.velocity.toNumpy() / 3.92)  # Terminal velocity = 3.92
+
+        # Looking at block  [air, ground, wood, leaf]
+        block, blockPos = self.game.getBlockInFrontOfPlayer()
+        obs = np.append(obs, 1 if block == Blocks.AIR else 0)
+        obs = np.append(obs, 1 if block == Blocks.GROUND else 0)
+        obs = np.append(obs, 1 if block == Blocks.WOOD else 0)
+        obs = np.append(obs, 1 if block == Blocks.LEAF else 0)
+
+        # Is kicking to some block [air, ground, wood, leaf]
+        block, blockPos = self.game.getBlockInFrontOfPlayer(0, 0.5)
+        obs = np.append(obs, 1 if block else 0)
+
+        # Clip everything in range -1 to 1
         return obs.clip(-1, 1)
