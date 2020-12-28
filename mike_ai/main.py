@@ -2,6 +2,8 @@ import os
 import sys
 
 # Has to be here so the os PATH is correct for the imports
+from stable_baselines.common.callbacks import CheckpointCallback
+
 sys.path.append(os.getcwd())
 
 from gym_treechop.TreeChopEnv import TreeChopEnv, REWARDS
@@ -37,7 +39,7 @@ def main():
     print(device_lib.list_local_devices())
     print("####################################")
 
-    env = TreeChopEnv()
+    env = TreeChopEnv(200)
     # Optional: PPO2 requires a vectorized environment to run
     # the env is now wrapped automatically when passing it to the constructor
     env = DummyVecEnv([lambda: env])
@@ -52,15 +54,17 @@ def main():
         env=env,
         # n_steps=512,
         nminibatches=1,
-        # learning_rate=lambda f: (f+0.5)**3 * 2.5e-3,  # 2.5e-4,  #
+        learning_rate=lambda f: (f + 0.3) ** 3 * 2.5e-3,  # 2.5e-4,  #
         tensorboard_log="./ppo2_tensorboard/",
         verbose=1,
     )
 
+    checkpoint_callback = CheckpointCallback(save_freq=10_000, save_path='./model_checkpoints/')
+
     TIMESTAMPS = 200_000  # _000
     # model.load("trained_PPO31.model")
     # model = PPO2.load("trained_PPO53.model", env)
-    model.learn(total_timesteps=TIMESTAMPS)
+    model.learn(total_timesteps=TIMESTAMPS, callback=[checkpoint_callback, ])
     model.save(f"trained_{int(time())}_{TIMESTAMPS}.model")
 
     print("#########################################")

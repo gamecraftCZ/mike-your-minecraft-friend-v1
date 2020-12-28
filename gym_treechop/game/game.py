@@ -121,8 +121,8 @@ class Game:
 
         treeHeight = self._generateTree()
         if treeHeight == MIN_TREE_HEIGHT:
-            self.player.position.x = randNotInCenter(WORLD_SHAPE.x, 5)  # 0-maxX, not 5 blocks around center
-            self.player.position.y = randNotInCenter(WORLD_SHAPE.y, 5)  # 0-maxY, not 5 blocks around center
+            self.player.position.x = 7 + random()  # randNotInCenter(WORLD_SHAPE.x, 5)  # 0-maxX, not 5 blocks around center
+            self.player.position.y = 7 + random()  # randNotInCenter(WORLD_SHAPE.y, 5)  # 0-maxY, not 5 blocks around center
 
         # print("Initialized Game")
 

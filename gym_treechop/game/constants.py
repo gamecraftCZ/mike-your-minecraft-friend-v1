@@ -20,7 +20,7 @@ class Blocks:
 
 
 BlockHardness = {  # Default seconds required to break
-    Blocks.AIR: 0,
+    Blocks.AIR: 0.0000001,
     Blocks.GROUND: 0.5,
     Blocks.WOOD: 2,
     Blocks.LEAF: 0.2

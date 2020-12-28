@@ -5,11 +5,10 @@ import gym
 import numpy as np
 from gym import spaces
 
-from gym_treechop.game.constants import WORLD_SHAPE, Blocks
+from gym_treechop.game.constants import WORLD_SHAPE, Blocks, BlockHardness, HARDNESS_MULTIPLIER
 from gym_treechop.game.game import Game
 from gym_treechop.game.physiscs import Physics
 from gym_treechop.game.renderer import Renderer
-from gym_treechop.game.utils import limit
 
 
 class REWARDS:
@@ -26,8 +25,10 @@ class REWARDS:
 
 
 DELTA = 0.1
+
+
 # MAX_GAME_LENGTH_STEPS = 100  # 10s
-MAX_GAME_LENGTH_STEPS = 50  # 5s
+# MAX_GAME_LENGTH_STEPS = 50  # 5s
 
 
 # MAX_GAME_LENGTH_STEPS = 300  # 30s
@@ -36,7 +37,8 @@ MAX_GAME_LENGTH_STEPS = 50  # 5s
 class TreeChopEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self):
+    def __init__(self, maxGameLengthSteps: int = 50):
+        self.setup = {"max_game_length_steps": maxGameLengthSteps}
         # PPO2 algorithm does not support spaces.Tuple!
         # self.action_space = spaces.Tuple((
         #     spaces.Discrete(2),  # Attack 0/1
@@ -71,7 +73,8 @@ class TreeChopEnv(gym.Env):
         player_observations = 3 + 3 + 2  # position, velocity, rotation
         looking_at_block_one_hot = 4  # air, ground, wood, leaf
         kicking_blocks = 1  # true/false
-        observations_count = world_size + player_observations + looking_at_block_one_hot + kicking_blocks
+        chopping = 1  # 0 - fully chopped
+        observations_count = world_size + player_observations + looking_at_block_one_hot + kicking_blocks + chopping
         self.observation_space = spaces.Box(low=-1, high=1, shape=(observations_count,), dtype=np.float32)
 
         self.game = Game()
@@ -87,12 +90,12 @@ class TreeChopEnv(gym.Env):
     def _isDone(self) -> bool:
         return self.game.isGameOver() \
                or self.game.getWoodLeft() == 0 \
-               or self.state["steps_passed"] >= MAX_GAME_LENGTH_STEPS
+               or self.state["steps_passed"] >= self.setup["max_game_length_steps"]
 
     def step(self, action: List[float]):
         # print("ACTION: ", action)
         wood_left = self.game.getWoodLeft()
-        obs = self._getObservation()
+        # obs = self._getObservation()
         done = self._isDone()
 
         reward = 0
@@ -113,18 +116,18 @@ class TreeChopEnv(gym.Env):
             #     self.game.right()
 
             # Look - continuous
-            upDown = self.game.player.rotation.y + (action[4] / 8)  # -1 to 1 -> 0-1PI
-            leftRight = self.game.player.rotation.x + (action[5] / 8)  # -1 to 1 -> 0-2PI
-
-            self.game.player.rotation.y = limit(upDown, 0, math.pi)
-            self.game.player.rotation.x = limit(leftRight, 0, 2 * math.pi)
+            # upDown = self.game.player.rotation.y + (action[4] / 8)  # -1 to 1 -> 0-1PI
+            # leftRight = self.game.player.rotation.x + (action[5] / 8)  # -1 to 1 -> 0-2PI
+            #
+            # self.game.player.rotation.y = limit(upDown, 0, math.pi)
+            # self.game.player.rotation.x = limit(leftRight, 0, 2 * math.pi)
 
             # Look - exact
-            # upDown = (action[4] + 1) / 2 * math.pi  # 0-2 -> 0-1PI
-            # leftRight = (action[5] + 1) * math.pi  # 0-2 -> 0-2PI
-            #
-            # self.game.player.rotation.y = upDown
-            # self.game.player.rotation.x = leftRight
+            upDown = (action[4] + 1) / 2 * math.pi  # 0-2 -> 0-1PI
+            leftRight = (action[5] + 1) * math.pi  # 0-2 -> 0-2PI
+
+            self.game.player.rotation.y = upDown
+            self.game.player.rotation.x = leftRight
 
             # Physics
             for i in range(int(1 / DELTA)):  # 0.1*10 = 1tick
@@ -193,7 +196,6 @@ class TreeChopEnv(gym.Env):
 
             # New observation
             # wood_left = self.game.getWoodLeft()
-            obs = self._getObservation()
             done = self._isDone()
 
         info = {"wood_left": wood_left}
@@ -204,6 +206,7 @@ class TreeChopEnv(gym.Env):
 
         self.state["steps_passed"] += 1
 
+        obs = self._getObservation()
         return obs, reward, done, info
 
     def reset(self):
@@ -235,15 +238,20 @@ class TreeChopEnv(gym.Env):
         obs = np.append(obs, self.game.player.velocity.toNumpy() / 3.92)  # Terminal velocity = 3.92
 
         # Looking at block  [air, ground, wood, leaf]
-        block, blockPos = self.game.getBlockInFrontOfPlayer()
-        obs = np.append(obs, 1 if block == Blocks.AIR else 0)
-        obs = np.append(obs, 1 if block == Blocks.GROUND else 0)
-        obs = np.append(obs, 1 if block == Blocks.WOOD else 0)
-        obs = np.append(obs, 1 if block == Blocks.LEAF else 0)
+        lookingBlock, blockPos = self.game.getBlockInFrontOfPlayer()
+        obs = np.append(obs, 1 if lookingBlock == Blocks.AIR else 0)
+        obs = np.append(obs, 1 if lookingBlock == Blocks.GROUND else 0)
+        obs = np.append(obs, 1 if lookingBlock == Blocks.WOOD else 0)
+        obs = np.append(obs, 1 if lookingBlock == Blocks.LEAF else 0)
 
         # Is kicking to some block [air, ground, wood, leaf]
-        block, blockPos = self.game.getBlockInFrontOfPlayer(0, 0.5)
-        obs = np.append(obs, 1 if block else 0)
+        kickingBlock, blockPos = self.game.getBlockInFrontOfPlayer(0, 0.5)
+        obs = np.append(obs, 1 if kickingBlock else 0)
+
+        # Chopping block progress
+        obs = np.append(obs, 1 - (self.game.attackTicksRemaining
+                                  / (BlockHardness[lookingBlock]
+                                     * HARDNESS_MULTIPLIER)) if self.game.attackTicksRemaining else -1)
 
         # Clip everything in range -1 to 1
         return obs.clip(-1, 1)
