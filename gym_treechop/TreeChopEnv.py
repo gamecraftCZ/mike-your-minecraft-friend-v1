@@ -13,26 +13,19 @@ from gym_treechop.game.renderer import Renderer
 
 class REWARDS:
     # Sweeties
-    WOOD_CHOPPED = 1000
-    LOOKING_AT_WOOD = 50  # 10x time punishment ???
+    WOOD_CHOPPED = 1_000
+    LOOKING_AT_WOOD = 5  # 10x time punishment ???
     WOOD_CHOPPING_PER_TICK = 5  # Up to reward x*10 = 20 ???
-    BEING_CLOSE_TO_TREE = 8  # 0.05  # For closer each block closer to the center ???
+    BEING_CLOSE_TO_TREE = 1  # 0.05  # For closer each block closer to the center ???
 
     # Punishments
-    TICK_PASSED = -0.004
-    WRONG_BLOCK_DESTROYED = -100
+    TICK_PASSED = 0  # -0.004
+    WRONG_BLOCK_DESTROYED = -10
     DIED = -100  # -10_000
 
 
 DELTA = 0.1
 
-
-# MAX_GAME_LENGTH_STEPS = 100  # 10s
-# MAX_GAME_LENGTH_STEPS = 50  # 5s
-
-
-# MAX_GAME_LENGTH_STEPS = 300  # 30s
-# MAX_GAME_LENGTH_STEPS = 500  # 50s
 
 class TreeChopEnv(gym.Env):
     metadata = {'render.modes': ['human']}
@@ -50,7 +43,7 @@ class TreeChopEnv(gym.Env):
         #     spaces.Box(low=-1, high=1, shape=(1,)),  # Up/Down 0 - 1PI
         #     spaces.Box(low=-1, high=1, shape=(1,)),  # Left/Right 0 - 2PI
         # ))
-        self.action_space = spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float32)
+        self.action_space = spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float32)  # low=-1, high=1,
         # Attack (-1; 1) - Attacks if 0.5+
         # Jump (-1; 1) - Jumps if 0.5+
         # Backward/Forward (-1; 1) - Backward (-0.5-), Forward (0.5+)
@@ -85,7 +78,8 @@ class TreeChopEnv(gym.Env):
         return {"center": self.game.getPlayerDistanceToCenter(),
                 "look": False,
                 "chopping_reward": 0,
-                "steps_passed": 0, }
+                "steps_passed": 0,
+                "latest_look_block_pos": None}
 
     def _isDone(self) -> bool:
         return self.game.isGameOver() \
@@ -93,7 +87,6 @@ class TreeChopEnv(gym.Env):
                or self.state["steps_passed"] >= self.setup["max_game_length_steps"]
 
     def step(self, action: List[float]):
-        # print("ACTION: ", action)
         wood_left = self.game.getWoodLeft()
         # obs = self._getObservation()
         done = self._isDone()
@@ -107,8 +100,9 @@ class TreeChopEnv(gym.Env):
 
             # if action[2] < -0.5:  # Backward
             #     self.game.backward()
-            if action[2] > -0.5:  # .5:  # Forward
+            if action[2] > 0.5:  # 0.5:  # Forward
                 self.game.forward()
+                reward += 0.1
 
             # if action[3] < -0.5:  # Left
             #     self.game.left()
@@ -128,6 +122,11 @@ class TreeChopEnv(gym.Env):
 
             self.game.player.rotation.y = upDown
             self.game.player.rotation.x = leftRight
+
+            # print("action[4]: ", action[4])
+            # print("upDown: ", upDown)
+            # print("action[5]: ", action[5])
+            # print("leftRight: ", leftRight)
 
             # Physics
             for i in range(int(1 / DELTA)):  # 0.1*10 = 1tick
@@ -162,27 +161,33 @@ class TreeChopEnv(gym.Env):
             if block == Blocks.WOOD:
                 if not self.state["look"]:
                     reward += REWARDS.LOOKING_AT_WOOD
-                    print("WOOD look!")
+                    # print("WOOD look!")
                 self.state["look"] = True
 
                 if self.game.attackTicksRemaining > 0:
-                    rewardToGet = max(0, (40 - self.game.attackTicksRemaining)) * REWARDS.WOOD_CHOPPING_PER_TICK
+                    TICKS_TO_DESTROY_WOOD = BlockHardness[Blocks.WOOD] * HARDNESS_MULTIPLIER * 20
+                    rewardToGet = max(1, (
+                                TICKS_TO_DESTROY_WOOD - self.game.attackTicksRemaining)) * REWARDS.WOOD_CHOPPING_PER_TICK
                     reward += rewardToGet
                     self.state["chopping_reward"] += rewardToGet
-                    print("Hit Wood")
+                    print("Hit Wood, reward: ", rewardToGet)
 
             else:
                 if self.state["look"]:
                     reward -= REWARDS.LOOKING_AT_WOOD
                     self.state["look"] = False
-                    print("No Wood look!")
+                    # print("No Wood look!")
 
-            if self.game.attackTicksRemaining <= 0:
+            if blockPosition != self.state["latest_look_block_pos"] or self.game.attackTicksRemaining <= 0:
                 # stopped chopping
                 if self.state["chopping_reward"]:
                     print("UnHit Wood")
-                reward -= self.state["chopping_reward"]
-                self.state["chopping_reward"] = 0
+                    reward -= self.state["chopping_reward"] / 2
+                    self.state["chopping_reward"] = 0
+
+            if block:
+                print("Attack: ", Blocks.toName(block))
+                self.state["latest_look_block_pos"] = blockPosition
 
             # REWARD + moving to the center
             newDistanceToCenter = self.game.getPlayerDistanceToCenter()
