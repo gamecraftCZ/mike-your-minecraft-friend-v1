@@ -2,17 +2,16 @@ import os
 import sys
 
 # Has to be here so the os PATH is correct for the imports
-from stable_baselines.common.callbacks import CheckpointCallback
+from stable_baselines.sac import LnMlpPolicy
 
 sys.path.append(os.getcwd())
 
-from gym_treechop.TreeChopEnv import TreeChopEnv, REWARDS
+from gym_treechop.TreeChopEnv import TreeChopEnv
 
-from time import time
-
-from stable_baselines import PPO2
-from stable_baselines.common.policies import MlpLstmPolicy, FeedForwardPolicy, LstmPolicy
+from stable_baselines import SAC
+from stable_baselines.common.policies import FeedForwardPolicy, LstmPolicy
 from stable_baselines.common.vec_env import DummyVecEnv
+from stable_baselines.common.callbacks import CheckpointCallback
 
 from tensorflow.python.client import device_lib
 
@@ -39,7 +38,7 @@ def main():
     print(device_lib.list_local_devices())
     print("####################################")
 
-    env = TreeChopEnv(200)
+    env = TreeChopEnv(maxGameLengthSteps=200)
     # Optional: PPO2 requires a vectorized environment to run
     # the env is now wrapped automatically when passing it to the constructor
     env = DummyVecEnv([lambda: env])
@@ -49,23 +48,33 @@ def main():
     # n_cpu = 2
     # env = SubprocVecEnv([lambda: env for i in range(n_cpu)])
 
-    model = PPO2(
-        policy=MlpLstmPolicy,
+    # model = PPO2(
+    #     policy=MlpPolicy,
+    #     env=env,
+    #     # n_steps=512,
+    #     nminibatches=1,
+    #     learning_rate=lambda f: (f + 0.3) ** 3 * 2.5e-3,  # 2.5e-4,  #
+    #     tensorboard_log="./ppo2_tensorboard/",
+    #     verbose=1,
+    # )
+
+    model = SAC(
+        policy=LnMlpPolicy,
         env=env,
-        # n_steps=512,
-        nminibatches=1,
-        learning_rate=lambda f: (f + 0.3) ** 3 * 2.5e-3,  # 2.5e-4,  #
-        tensorboard_log="./ppo2_tensorboard/",
+        # nminibatches=1,
+        # learning_rate=2.5e-4,
+        tensorboard_log="./tensorboard/",
         verbose=1,
     )
 
-    checkpoint_callback = CheckpointCallback(save_freq=10_000, save_path='./model_checkpoints/')
+    checkpoint_callback = CheckpointCallback(save_freq=1_000, save_path='./model_checkpoints/')
 
     TIMESTAMPS = 200_000  # _000
-    # model.load("trained_PPO31.model")
-    # model = PPO2.load("trained_PPO53.model", env)
+    model = SAC.load("trained_SAC1.zip", env)  # , policy=LnMlpPolicy)
+    # model = PPO2.load("model_checkpoints/rl_model_50000_steps.zip", env)
+    model.tensorboard_log = "./tensorboard/"
     model.learn(total_timesteps=TIMESTAMPS, callback=[checkpoint_callback, ])
-    model.save(f"trained_{int(time())}_{TIMESTAMPS}.model")
+    # model.save(f"trained_{int(time())}_{TIMESTAMPS}.model")
 
     print("#########################################")
     print("################ TEST: ##################")
@@ -76,17 +85,20 @@ def main():
     obs = env.reset()
     cumulativeReward = 0
     plt.axis([0, 500, -20, 150])
+    print("Started")
     # toPlotY = []
     try:
         for i in range(500):  # 10 = 1 second in game
             action, _states = model.predict(obs)
+            # print("ACTION: ", action)
+
             # action = env.action_space.sample()
 
             obs, rewards, done, info = env.step(action)
             cumulativeReward += rewards
-            if abs(rewards) > abs(REWARDS.TICK_PASSED):
-                print(f"Reward: {rewards}, done: {done}, info: {info}")
-            print("Cumulative reward: ", cumulativeReward)
+            # if abs(rewards) > abs(REWARDS.TICK_PASSED):
+            #     print(f"Reward: {rewards}, done: {done}, info: {info}")
+            # print("Cumulative reward: ", cumulativeReward)
 
             env.render()
 
@@ -103,9 +115,13 @@ def main():
 
             # sleep(0.05)
             plt.pause(0.05)
-    except:
+    except KeyboardInterrupt:
         pass
+    except Exception as e:
+        print("EXCEPTION!")
+        raise e
 
+    print("End")
     plt.show()
     env.close()
 
