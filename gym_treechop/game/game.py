@@ -185,7 +185,7 @@ class Game:
                 self.attackTicksRemaining = BlockHardness[block] * HARDNESS_MULTIPLIER * 20
 
             # Some block is attacked
-            attackStrength = 1 * delta
+            attackStrength = 20 * delta  # 20ticks per second
             if not playerIsStanding(self.player.position, self.environment):
                 attackStrength /= 5
 

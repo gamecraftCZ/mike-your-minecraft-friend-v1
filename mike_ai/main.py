@@ -1,8 +1,9 @@
 import os
 import sys
 
-# Has to be here so the os PATH is correct for the imports
 from stable_baselines.sac import LnMlpPolicy
+
+# Has to be here so the os PATH is correct for the imports
 
 sys.path.append(os.getcwd())
 
@@ -38,7 +39,7 @@ def main():
     print(device_lib.list_local_devices())
     print("####################################")
 
-    env = TreeChopEnv(maxGameLengthSteps=200)
+    env = TreeChopEnv(maxGameLengthSteps=500)
     # Optional: PPO2 requires a vectorized environment to run
     # the env is now wrapped automatically when passing it to the constructor
     env = DummyVecEnv([lambda: env])
@@ -69,12 +70,12 @@ def main():
 
     checkpoint_callback = CheckpointCallback(save_freq=1_000, save_path='./model_checkpoints/')
 
-    TIMESTAMPS = 200_000  # _000
-    model = SAC.load("trained_SAC1.zip", env)  # , policy=LnMlpPolicy)
+    TIMESTAMPS = 2_000_000  # _000
+    model = SAC.load("trained_SAC12.zip", env)
     # model = PPO2.load("model_checkpoints/rl_model_50000_steps.zip", env)
-    model.tensorboard_log = "./tensorboard/"
-    model.learn(total_timesteps=TIMESTAMPS, callback=[checkpoint_callback, ])
-    # model.save(f"trained_{int(time())}_{TIMESTAMPS}.model")
+    # model.tensorboard_log = "./tensorboard/"
+    # model.learn(total_timesteps=TIMESTAMPS, callback=[checkpoint_callback, ])
+    # model.save(f"trained_{int(time())}_{TIMESTAMPS}.zip")
 
     print("#########################################")
     print("################ TEST: ##################")
@@ -84,7 +85,7 @@ def main():
     input("Press any key to start...")
     obs = env.reset()
     cumulativeReward = 0
-    plt.axis([0, 500, -20, 150])
+    plt.axis([0, 500, -20, 4500])
     print("Started")
     # toPlotY = []
     try:

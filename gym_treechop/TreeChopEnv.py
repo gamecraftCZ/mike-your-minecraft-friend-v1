@@ -9,19 +9,20 @@ from gym_treechop.game.constants import WORLD_SHAPE, Blocks, BlockHardness, HARD
 from gym_treechop.game.game import Game
 from gym_treechop.game.physiscs import Physics
 from gym_treechop.game.renderer import Renderer
+from gym_treechop.game.utils import limit
 
 
 class REWARDS:
     # Sweeties
     WOOD_CHOPPED = 1_000
     LOOKING_AT_WOOD = 5  # 10x time punishment ???
-    WOOD_CHOPPING_PER_TICK = 5  # Up to reward x*10 = 20 ???
+    WOOD_CHOPPING_PER_TICK = 1  # Up to reward x*10 = 20 ???
     BEING_CLOSE_TO_TREE = 1  # 0.05  # For closer each block closer to the center ???
 
     # Punishments
-    TICK_PASSED = 0  # -0.004
+    TICK_PASSED = -0.04
     WRONG_BLOCK_DESTROYED = -10
-    DIED = -100  # -10_000
+    DIED = 0  # -1_000  # -10_000
 
 
 DELTA = 0.1
@@ -67,7 +68,10 @@ class TreeChopEnv(gym.Env):
         looking_at_block_one_hot = 4  # air, ground, wood, leaf
         kicking_blocks = 1  # true/false
         chopping = 1  # 0 - fully chopped
-        observations_count = world_size + player_observations + looking_at_block_one_hot + kicking_blocks + chopping
+        distance_to_tree = 1
+        observations_count = world_size + player_observations \
+                             + looking_at_block_one_hot + kicking_blocks \
+                             + chopping + distance_to_tree
         self.observation_space = spaces.Box(low=-1, high=1, shape=(observations_count,), dtype=np.float32)
 
         self.game = Game()
@@ -140,7 +144,7 @@ class TreeChopEnv(gym.Env):
                         reward += REWARDS.WOOD_CHOPPED
                         self.state["chopping_reward"] = 0
                         wood_left = self.game.getWoodLeft()
-                        # wood_left = 0 # TODO remove this line, makes the AI to choop only 1 wood
+                        # wood_left = 0 # TODO remove this line, as it makes the AI to chop only 1 wood
                         print("Chopped FULL WOOD Block")
                     elif block == Blocks.LEAF:
                         pass
@@ -167,10 +171,11 @@ class TreeChopEnv(gym.Env):
                 if self.game.attackTicksRemaining > 0:
                     TICKS_TO_DESTROY_WOOD = BlockHardness[Blocks.WOOD] * HARDNESS_MULTIPLIER * 20
                     rewardToGet = max(1, (
-                                TICKS_TO_DESTROY_WOOD - self.game.attackTicksRemaining)) * REWARDS.WOOD_CHOPPING_PER_TICK
+                            TICKS_TO_DESTROY_WOOD - self.game.attackTicksRemaining))
+                    rewardToGet = math.log(rewardToGet + 1) * REWARDS.WOOD_CHOPPING_PER_TICK
                     reward += rewardToGet
                     self.state["chopping_reward"] += rewardToGet
-                    print("Hit Wood, reward: ", rewardToGet)
+                    print(f"Hit Wood. remaining: {self.game.attackTicksRemaining}, reward: {rewardToGet}")
 
             else:
                 if self.state["look"]:
@@ -186,7 +191,7 @@ class TreeChopEnv(gym.Env):
                     self.state["chopping_reward"] = 0
 
             if block:
-                print("Attack: ", Blocks.toName(block))
+                # print("Attack: ", Blocks.toName(block))
                 self.state["latest_look_block_pos"] = blockPosition
 
             # REWARD + moving to the center
@@ -257,6 +262,11 @@ class TreeChopEnv(gym.Env):
         obs = np.append(obs, 1 - (self.game.attackTicksRemaining
                                   / (BlockHardness[lookingBlock]
                                      * HARDNESS_MULTIPLIER)) if self.game.attackTicksRemaining else -1)
+
+        # Is close to tree?
+        distanceToCenter = self.game.getPlayerDistanceToCenter()
+        scaledDistanceToCenter = distanceToCenter / 5  # Smaller as we get closer
+        obs = np.append(obs, limit(1 - scaledDistanceToCenter, -1, 1))  # larger as we get closer
 
         # Clip everything in range -1 to 1
         return obs.clip(-1, 1)
