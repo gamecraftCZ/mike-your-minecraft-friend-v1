@@ -69,9 +69,10 @@ class TreeChopEnv(gym.Env):
         kicking_blocks = 1  # true/false
         chopping = 1  # 0 - fully chopped
         distance_to_tree = 1
+        wood_blocks = WORLD_SHAPE.z
         observations_count = world_size + player_observations \
                              + looking_at_block_one_hot + kicking_blocks \
-                             + chopping + distance_to_tree
+                             + chopping + distance_to_tree + wood_blocks
         self.observation_space = spaces.Box(low=-1, high=1, shape=(observations_count,), dtype=np.float32)
 
         self.game = Game()
@@ -175,7 +176,7 @@ class TreeChopEnv(gym.Env):
                     rewardToGet = math.log(rewardToGet + 1) * REWARDS.WOOD_CHOPPING_PER_TICK
                     reward += rewardToGet
                     self.state["chopping_reward"] += rewardToGet
-                    print(f"Hit Wood. remaining: {self.game.attackTicksRemaining}, reward: {rewardToGet}")
+                    # print(f"Hit Wood. remaining: {self.game.attackTicksRemaining}, reward: {rewardToGet}")
 
             else:
                 if self.state["look"]:
@@ -186,8 +187,8 @@ class TreeChopEnv(gym.Env):
             if blockPosition != self.state["latest_look_block_pos"] or self.game.attackTicksRemaining <= 0:
                 # stopped chopping
                 if self.state["chopping_reward"]:
-                    print("UnHit Wood")
-                    reward -= self.state["chopping_reward"] / 2
+                    # print("UnHit Wood")
+                    reward -= self.state["chopping_reward"]  # / 2
                     self.state["chopping_reward"] = 0
 
             if block:
@@ -267,6 +268,10 @@ class TreeChopEnv(gym.Env):
         distanceToCenter = self.game.getPlayerDistanceToCenter()
         scaledDistanceToCenter = distanceToCenter / 5  # Smaller as we get closer
         obs = np.append(obs, limit(1 - scaledDistanceToCenter, -1, 1))  # larger as we get closer
+
+        # Blocks of wood (0-8)
+        woodBlocks = self.game.getWoodBlocks()
+        obs = np.append(obs, [1 if block else 0 for block in woodBlocks])  # larger as we get closer
 
         # Clip everything in range -1 to 1
         return obs.clip(-1, 1)

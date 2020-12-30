@@ -1,6 +1,7 @@
 import math
 from math import copysign
 from random import random
+from typing import List
 
 import numpy as np
 from tensorflow.python.keras.utils import to_categorical
@@ -58,6 +59,7 @@ class Game:
 
     oneHotEncodedCache = None
     woodLeftCache = None
+    woodBlocksCache = None
 
     def getEnvironmentOneHotEncoded(self):
         if self.oneHotEncodedCache is None:
@@ -69,6 +71,17 @@ class Game:
         if self.woodLeftCache is None:
             self.woodLeftCache = np.count_nonzero(self.environment.flatten() == Blocks.WOOD)
         return self.woodLeftCache
+
+    # Return if there is block on each layer of environment
+    def getWoodBlocks(self) -> List[bool]:
+        if not self.woodBlocksCache:
+            self.woodBlocksCache = []
+            for z in range(WORLD_SHAPE.z):
+                if np.count_nonzero(self.environment[z].flatten() == Blocks.WOOD):
+                    self.woodBlocksCache.append(True)
+                else:
+                    self.woodBlocksCache.append(False)
+        return self.woodBlocksCache
 
     # region Environment Generation
     def _generateGround(self):
@@ -276,6 +289,7 @@ class Game:
             if self.environment[pos.z, pos.y, pos.x] != block:
                 self.environment[pos.z, pos.y, pos.x] = block
                 self.oneHotEncodedCache = None
+                self.woodBlocksCache = None
                 if block == Blocks.WOOD:
                     self.woodLeftCache = None
             return True

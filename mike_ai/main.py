@@ -63,7 +63,7 @@ def main():
         policy=LnMlpPolicy,
         env=env,
         # nminibatches=1,
-        # learning_rate=2.5e-4,
+        learning_rate=1e-3,
         tensorboard_log="./tensorboard/",
         verbose=1,
     )
@@ -71,8 +71,8 @@ def main():
     checkpoint_callback = CheckpointCallback(save_freq=1_000, save_path='./model_checkpoints/')
 
     TIMESTAMPS = 2_000_000  # _000
-    model = SAC.load("trained_SAC12.zip", env)
-    # model = PPO2.load("model_checkpoints/rl_model_50000_steps.zip", env)
+    model = SAC.load("rl_model_635000_steps.zip", env)
+    # model = SAC.load("model_checkpoints/rl_model_895000_steps.zip", env)
     # model.tensorboard_log = "./tensorboard/"
     # model.learn(total_timesteps=TIMESTAMPS, callback=[checkpoint_callback, ])
     # model.save(f"trained_{int(time())}_{TIMESTAMPS}.zip")
@@ -100,6 +100,8 @@ def main():
             # if abs(rewards) > abs(REWARDS.TICK_PASSED):
             #     print(f"Reward: {rewards}, done: {done}, info: {info}")
             # print("Cumulative reward: ", cumulativeReward)
+
+            print("obs: ", obs)
 
             env.render()
 
