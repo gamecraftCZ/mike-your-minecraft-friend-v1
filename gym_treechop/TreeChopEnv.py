@@ -21,7 +21,7 @@ class REWARDS:
 
     # Punishments
     TICK_PASSED = -0.04
-    WRONG_BLOCK_DESTROYED = -10
+    WRONG_BLOCK_DESTROYED = -25
     DIED = 0  # -1_000  # -10_000
 
 
@@ -70,9 +70,10 @@ class TreeChopEnv(gym.Env):
         chopping = 1  # 0 - fully chopped
         distance_to_tree = 1
         wood_blocks = WORLD_SHAPE.z
+        time_remaining = 1
         observations_count = world_size + player_observations \
                              + looking_at_block_one_hot + kicking_blocks \
-                             + chopping + distance_to_tree + wood_blocks
+                             + chopping + distance_to_tree + wood_blocks + time_remaining
         self.observation_space = spaces.Box(low=-1, high=1, shape=(observations_count,), dtype=np.float32)
 
         self.game = Game()
@@ -272,6 +273,9 @@ class TreeChopEnv(gym.Env):
         # Blocks of wood (0-8)
         woodBlocks = self.game.getWoodBlocks()
         obs = np.append(obs, [1 if block else 0 for block in woodBlocks])  # larger as we get closer
+
+        # Time elapsed (normalized from 0-1)
+        obs = np.append(obs, self.state["steps_passed"] / self.setup["max_game_length_steps"])
 
         # Clip everything in range -1 to 1
         return obs.clip(-1, 1)

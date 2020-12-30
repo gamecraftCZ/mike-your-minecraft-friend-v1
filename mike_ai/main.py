@@ -1,5 +1,6 @@
 import os
 import sys
+from time import time
 
 from stable_baselines.sac import LnMlpPolicy
 
@@ -63,19 +64,19 @@ def main():
         policy=LnMlpPolicy,
         env=env,
         # nminibatches=1,
-        learning_rate=1e-3,
+        # learning_rate=7.5e-2,
         tensorboard_log="./tensorboard/",
         verbose=1,
     )
 
     checkpoint_callback = CheckpointCallback(save_freq=1_000, save_path='./model_checkpoints/')
 
-    TIMESTAMPS = 2_000_000  # _000
-    model = SAC.load("rl_model_635000_steps.zip", env)
+    TIMESTAMPS = 20_000_000  # _000
+    # model = SAC.load("rl_model_635000_steps.zip", env)
     # model = SAC.load("model_checkpoints/rl_model_895000_steps.zip", env)
     # model.tensorboard_log = "./tensorboard/"
-    # model.learn(total_timesteps=TIMESTAMPS, callback=[checkpoint_callback, ])
-    # model.save(f"trained_{int(time())}_{TIMESTAMPS}.zip")
+    model.learn(total_timesteps=TIMESTAMPS, callback=[checkpoint_callback, ])
+    model.save(f"trained_{int(time())}_{TIMESTAMPS}.zip")
 
     print("#########################################")
     print("################ TEST: ##################")
