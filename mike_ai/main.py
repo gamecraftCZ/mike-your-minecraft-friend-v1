@@ -40,7 +40,7 @@ def main():
     print(device_lib.list_local_devices())
     print("####################################")
 
-    env = TreeChopEnv(maxGameLengthSteps=500)
+    env = TreeChopEnv(maxGameLengthSteps=300)
     # Optional: PPO2 requires a vectorized environment to run
     # the env is now wrapped automatically when passing it to the constructor
     env = DummyVecEnv([lambda: env])
@@ -64,8 +64,8 @@ def main():
         policy=LnMlpPolicy,
         env=env,
         # nminibatches=1,
-        # learning_rate=7.5e-2,
-        tensorboard_log="./tensorboard/",
+        learning_rate=7.5e-3,
+        tensorboard_log="./new_tensorboard/",
         verbose=1,
     )
 
@@ -73,8 +73,8 @@ def main():
 
     TIMESTAMPS = 20_000_000  # _000
     # model = SAC.load("rl_model_635000_steps.zip", env)
-    # model = SAC.load("model_checkpoints/rl_model_895000_steps.zip", env)
-    # model.tensorboard_log = "./tensorboard/"
+    # model = SAC.load("model_checkpoints/rl_model_650000_steps.zip", env)
+    # model.tensorboard_log = "./new_tensorboard/"
     model.learn(total_timesteps=TIMESTAMPS, callback=[checkpoint_callback, ])
     model.save(f"trained_{int(time())}_{TIMESTAMPS}.zip")
 
@@ -102,8 +102,6 @@ def main():
             #     print(f"Reward: {rewards}, done: {done}, info: {info}")
             # print("Cumulative reward: ", cumulativeReward)
 
-            print("obs: ", obs)
-
             env.render()
 
             if done:
@@ -117,8 +115,10 @@ def main():
             # toPlotY.append(cumulativeReward)
             # plt.plot(toPlotY, linestyle='solid', color='blue')
 
-            # sleep(0.05)
+            print("obs: ", obs)
+            # input("Press any key to continue...")
             plt.pause(0.05)
+            # sleep(0.05)
     except KeyboardInterrupt:
         pass
     except Exception as e:

@@ -214,10 +214,12 @@ class Game:
     def stopBlockAttack(self):
         self.attackedBlockCoords = None
 
-    def getBlockInFrontOfPlayer(self, zPos: float = 1, lookingRange: float = BREAKING_RANGE) -> (int, Vec3):
+    def getBlockInFrontOfPlayer(self, zPos: float = 1, lookingRange: float = BREAKING_RANGE,
+                                direction: Vec3 = None) -> (int, Vec3, Vec3):
         # position = self.player.getHeadPosition()
         position = Vec3(self.player.position.x, self.player.position.y, self.player.position.z + zPos)
-        direction = self.player.getLookingDirectionVector()
+        if not direction:
+            direction = self.player.getLookingDirectionVector()
 
         blockPos = self.__getNextBlock(position, direction)
         while True:
@@ -266,6 +268,11 @@ class Game:
         return moved
 
     # endregion
+
+    def getNextWoodBlock(self) -> Vec3:
+        for z in range(WORLD_SHAPE.z):
+            if np.count_nonzero(self.environment[z].flatten() == Blocks.WOOD):
+                return Vec3(self.center, self.center, z)
 
     def _isInEnvironment(self, pos: Vec3):
         pos = pos.floor()

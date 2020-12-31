@@ -5,10 +5,11 @@ import gym
 import numpy as np
 from gym import spaces
 
-from gym_treechop.game.constants import WORLD_SHAPE, Blocks, BlockHardness, HARDNESS_MULTIPLIER
+from gym_treechop.game.constants import Blocks, BlockHardness, HARDNESS_MULTIPLIER
 from gym_treechop.game.game import Game
 from gym_treechop.game.physiscs import Physics
 from gym_treechop.game.renderer import Renderer
+from gym_treechop.game.structures import Vec3
 from gym_treechop.game.utils import limit
 
 
@@ -16,7 +17,7 @@ class REWARDS:
     # Sweeties
     WOOD_CHOPPED = 1_000
     LOOKING_AT_WOOD = 5  # 10x time punishment ???
-    WOOD_CHOPPING_PER_TICK = 1  # Up to reward x*10 = 20 ???
+    WOOD_CHOPPING_PER_TICK = 2  # Up to reward x*10 = 20 ???
     BEING_CLOSE_TO_TREE = 1  # 0.05  # For closer each block closer to the center ???
 
     # Punishments
@@ -63,17 +64,28 @@ class TreeChopEnv(gym.Env):
         #     # Player rotation
         #     spaces.Box(low=0, high=1, shape=(2,), dtype=np.float32),
         # ))
-        world_size = 0  # WORLD_SHAPE.x * WORLD_SHAPE.y * WORLD_SHAPE.z * len(BLOCK_TYPES)  # one-hot encoded
-        player_observations = 3 + 3 + 2  # position, velocity, rotation
-        looking_at_block_one_hot = 4  # air, ground, wood, leaf
-        kicking_blocks = 1  # true/false
-        chopping = 1  # 0 - fully chopped
-        distance_to_tree = 1
-        wood_blocks = WORLD_SHAPE.z
-        time_remaining = 1
-        observations_count = world_size + player_observations \
-                             + looking_at_block_one_hot + kicking_blocks \
-                             + chopping + distance_to_tree + wood_blocks + time_remaining
+        # world_size = 0  # WORLD_SHAPE.x * WORLD_SHAPE.y * WORLD_SHAPE.z * len(BLOCK_TYPES)  # one-hot encoded
+        # player_observations = 3 + 3 + 2  # position, velocity, rotation
+        # looking_at_block_one_hot = 4  # air, ground, wood, leaf
+        # kicking_blocks = 1  # true/false
+        # chopping = 1  # 0 - fully chopped
+        # distance_to_tree = 1
+        # wood_blocks = WORLD_SHAPE.z
+        # time_remaining = 1
+        player_rotation = 2
+        player_velocity = 3
+        distance_to_block_to_destroy = 1
+        rotation_to_block_to_destroy = 2
+        looking_at = 3  # block with penalty for destroy, no penalty for destroy, reward for destroy
+        kicking_block = 1
+        chopping_progress = 1  # 0 = fully chopped
+
+        observations_count = player_rotation + player_velocity \
+                             + distance_to_block_to_destroy + rotation_to_block_to_destroy \
+                             + looking_at + kicking_block + chopping_progress
+        # observations_count = world_size + player_observations \
+        #                      + looking_at_block_one_hot + kicking_blocks \
+        #                      + chopping + distance_to_tree + wood_blocks + time_remaining
         self.observation_space = spaces.Box(low=-1, high=1, shape=(observations_count,), dtype=np.float32)
 
         self.game = Game()
@@ -85,7 +97,8 @@ class TreeChopEnv(gym.Env):
                 "look": False,
                 "chopping_reward": 0,
                 "steps_passed": 0,
-                "latest_look_block_pos": None}
+                "latest_look_block_pos": None,
+                "to_destroy": Vec3(4, 4, 1)}
 
     def _isDone(self) -> bool:
         return self.game.isGameOver() \
@@ -240,42 +253,51 @@ class TreeChopEnv(gym.Env):
     def _getObservation(self):
         obs = np.array([])  # self.game.getEnvironmentOneHotEncoded().flatten()
 
-        # Player position (-0.5 - 0.5), rotation, velocity
-        obs = np.append(obs,
-                        self.game.player.position.toNumpy() / max(WORLD_SHAPE.x, WORLD_SHAPE.y, WORLD_SHAPE.z) - [.5,
-                                                                                                                  .5,
-                                                                                                                  .5])
-        obs = np.append(obs, (self.game.player.rotation.x - math.pi) / math.pi)  # 0 - 2PI -> -1PI - 1PI
-        obs = np.append(obs, (self.game.player.rotation.y - (math.pi / 2)) / (math.pi / 2))  # 0 - 1PI -> -0.5PI - 0.5PI
-        obs = np.append(obs, self.game.player.velocity.toNumpy() / 3.92)  # Terminal velocity = 3.92
+        # player_rotation - leftRight
+        obs = np.append(obs, (self.game.player.rotation.x - math.pi) / math.pi)  # 0 - 2PI -> -1PI - 1PI -> -1 - 1
 
-        # Looking at block  [air, ground, wood, leaf]
+        # player_rotation - upDown
+        obs = np.append(obs, (self.game.player.rotation.y - (math.pi / 2)) / (
+                math.pi / 2))  # 0 - 1PI -> -0.5PI - 0.5PI -> -1 - 1
+
+        # player_velocity
+        obs = np.append(obs, self.game.player.velocity.toNumpy() / 3.92)  # Terminal velocity = 3.92 -> -1 - 1
+
+        # distance_to_block_to_destroy
+        blockToDestroy = self.game.getNextWoodBlock()
+        distanceToBlock = self.game.player.getHeadPosition().getLengthTo(blockToDestroy)
+        obs = np.append(obs, limit(distanceToBlock / 5, 0, 1))
+
+        # rotation_to_block_to_destroy - leftRight -> -1PI - 1PI -> -1 - 1
+        b = blockToDestroy.x + 0.5 - self.game.player.getHeadPosition().x
+        a = blockToDestroy.y + 0.5 - self.game.player.getHeadPosition().y
+        leftRight = math.atan(a / b)
+        # print(f"leftRight: {leftRight/math.pi*180}")
+        obs = np.append(obs, (leftRight - math.pi) / math.pi)
+
+        # rotation_to_block_to_destroy - upDown -> -0.5PI - 0.5PI -> -1 - 1
+        c = distanceToBlock
+        b = limit(blockToDestroy.z + 0.5 - self.game.player.getHeadPosition().z, -c, c)
+        upDown = math.asin(b / c)
+        # print(f"upDown: {upDown/math.pi*180}")
+        obs = np.append(obs, (upDown - (math.pi / 2)) / (math.pi / 2))
+
+        # looking_at [ground, wood, leaf]
         lookingBlock, blockPos = self.game.getBlockInFrontOfPlayer()
-        obs = np.append(obs, 1 if lookingBlock == Blocks.AIR else 0)
-        obs = np.append(obs, 1 if lookingBlock == Blocks.GROUND else 0)
-        obs = np.append(obs, 1 if lookingBlock == Blocks.WOOD else 0)
-        obs = np.append(obs, 1 if lookingBlock == Blocks.LEAF else 0)
+        obs = np.append(obs, 1 if lookingBlock == Blocks.GROUND else 0)  # Penalty for destroy
+        obs = np.append(obs, 1 if blockPos == Blocks.WOOD else 0)  # Reward for destroy
+        obs = np.append(obs, 1 if lookingBlock == Blocks.LEAF else 0)  # No penalty, No reward
 
-        # Is kicking to some block [air, ground, wood, leaf]
-        kickingBlock, blockPos = self.game.getBlockInFrontOfPlayer(0, 0.5)
+        # kicking_block - Is kicking to some block, either Ground, Wood or Leaf
+        lookingDirection = self.game.player.getLookingDirectionVector()
+        lookingDirection.z = 0
+        kickingBlock, blockPos = self.game.getBlockInFrontOfPlayer(0, 0.5, lookingDirection)
         obs = np.append(obs, 1 if kickingBlock else 0)
 
-        # Chopping block progress
+        # chopping_progress
         obs = np.append(obs, 1 - (self.game.attackTicksRemaining
                                   / (BlockHardness[lookingBlock]
                                      * HARDNESS_MULTIPLIER)) if self.game.attackTicksRemaining else -1)
-
-        # Is close to tree?
-        distanceToCenter = self.game.getPlayerDistanceToCenter()
-        scaledDistanceToCenter = distanceToCenter / 5  # Smaller as we get closer
-        obs = np.append(obs, limit(1 - scaledDistanceToCenter, -1, 1))  # larger as we get closer
-
-        # Blocks of wood (0-8)
-        woodBlocks = self.game.getWoodBlocks()
-        obs = np.append(obs, [1 if block else 0 for block in woodBlocks])  # larger as we get closer
-
-        # Time elapsed (normalized from 0-1)
-        obs = np.append(obs, self.state["steps_passed"] / self.setup["max_game_length_steps"])
 
         # Clip everything in range -1 to 1
         return obs.clip(-1, 1)
