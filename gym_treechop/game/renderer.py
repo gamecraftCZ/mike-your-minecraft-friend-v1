@@ -8,6 +8,8 @@ from gym_treechop.game.game import Game
 
 BLOCK_COLORS = {1: v(0.9, 0.7, 0.5), 2: v(0.8, 0.8, 0.4), 3: vpython.color.green}
 
+LOOK_LENGTH = 4.5
+
 
 class Renderer:
     mainRenderer: 'Renderer'
@@ -41,8 +43,6 @@ class Renderer:
         position = game.player.position
         self.player.pos = v(position.x, position.z, position.y)
         self.playerLook.pos = v(position.x, position.z + 1, position.y)
-
-        LOOK_LENGTH = 10
 
         lookingVector = game.player.getLookingDirectionVector()
         self.playerLook.axis = v(lookingVector.x * LOOK_LENGTH, lookingVector.z * LOOK_LENGTH,

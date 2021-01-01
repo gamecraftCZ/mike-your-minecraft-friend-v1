@@ -1,6 +1,6 @@
 import math
 from math import copysign
-from random import random
+from random import random, randint
 from typing import List
 
 import numpy as np
@@ -91,11 +91,12 @@ class Game:
                 self.environment[0][y][x] = Blocks.GROUND
                 self.environment[height][y][x] = Blocks.GROUND
 
-    def _generateTree(self):
-        height = MIN_TREE_HEIGHT + int(
-            random() * (1 + MAX_TREE_HEIGHT - MIN_TREE_HEIGHT))  # minTreeHeight - maxTreeHeight
-        for i in range(height):
-            self.environment[1 + i][self.center][self.center] = Blocks.WOOD
+    def _generateTree(self, tree_blocks_to_generate=6):
+        height = randint(MIN_TREE_HEIGHT, MAX_TREE_HEIGHT)
+
+        # generate tree from top
+        for i in range(height, height - tree_blocks_to_generate, -1):
+            self.environment[i][self.center][self.center] = Blocks.WOOD
 
         self.__generateLeafs(1, height)
         for h in range(height - 1, height - 3, -1):
@@ -122,7 +123,7 @@ class Game:
                 or WORLD_SHAPE.y < self.player.position.y or self.player.position.y < 0
                 or WORLD_SHAPE.z < self.player.position.z or self.player.position.z < 0)
 
-    def __init__(self, renderer=None) -> None:
+    def __init__(self, renderer=None, tree_blocks_to_generate=6) -> None:
         self.renderer = renderer
         self.environment = np.zeros((WORLD_SHAPE.z, WORLD_SHAPE.y, WORLD_SHAPE.x), dtype=np.uint8)
         self.player = Player()
@@ -132,10 +133,10 @@ class Game:
 
         self._generateGround()
 
-        treeHeight = self._generateTree()
-        if treeHeight == MIN_TREE_HEIGHT:
-            self.player.position.x = 7 + random()  # randNotInCenter(WORLD_SHAPE.x, 5)  # 0-maxX, not 5 blocks around center
-            self.player.position.y = 7 + random()  # randNotInCenter(WORLD_SHAPE.y, 5)  # 0-maxY, not 5 blocks around center
+        treeHeight = self._generateTree(tree_blocks_to_generate)
+        if tree_blocks_to_generate > 4:
+            self.player.position.x = randNotInCenter(WORLD_SHAPE.x, 5)  # 0-maxX, not in center where the tree could be
+            self.player.position.y = randNotInCenter(WORLD_SHAPE.y, 5)  # 0-maxY, not in center where the tree could be
 
         # print("Initialized Game")
 
@@ -174,11 +175,11 @@ class Game:
 
     # 0 - 360 degrees -> 0 - 2PI rad
     def lookLeftRight(self, radian: float):
-        self.player.rotation.x = radian
+        self.player.rotation.x = (radian + 100 * math.pi) % math.tau
 
     # 0 - 180 degrees -> 0 - 1PI rad
     def lookUpDown(self, radian: float):
-        self.player.rotation.y = radian
+        self.player.rotation.y = max(0, min(math.pi, radian))
 
     # endregion
 

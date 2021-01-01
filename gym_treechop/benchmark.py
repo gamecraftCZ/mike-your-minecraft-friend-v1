@@ -39,8 +39,9 @@ def benchmark_blockAttack():
     print(f"Block attack - {elapsed} seconds")
 
 
-# 100_000 TREE_CHOP_ENV_RUNS took about 400 seconds on my 7300 HQ laptop before Numba optimizations.
-#  -> 10_000/4s -> 2500/s
+# 100_000 TREE_CHOP_ENV_RUNS took about 125 seconds on my 7300 HQ laptop before Numba optimizations.
+# OLD:                10_000/ 40s -> 250 steps/s
+# NEW (1.1.2020): -> 100_000/125s -> 800 steps/s
 def benchmark_TreeChopEnv():
     env = TreeChopEnv()
 
@@ -60,6 +61,7 @@ def benchmark_TreeChopEnv():
 
     elapsed = time() - startTime
     print(f"TreeChopEnd - {elapsed} seconds")
+    print(f"TreeChop - {TREE_CHOP_ENV_RUNS / elapsed} steps/second")
 
 
 def main():

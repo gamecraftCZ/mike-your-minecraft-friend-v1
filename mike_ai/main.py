@@ -40,7 +40,7 @@ def main():
     print(device_lib.list_local_devices())
     print("####################################")
 
-    env = TreeChopEnv(maxGameLengthSteps=300)
+    env = TreeChopEnv(maxGameLengthSteps=60)
     # Optional: PPO2 requires a vectorized environment to run
     # the env is now wrapped automatically when passing it to the constructor
     env = DummyVecEnv([lambda: env])
@@ -64,14 +64,14 @@ def main():
         policy=LnMlpPolicy,
         env=env,
         # nminibatches=1,
-        learning_rate=7.5e-3,
+        # learning_rate=7.5e-3,
         tensorboard_log="./new_tensorboard/",
         verbose=1,
     )
 
     checkpoint_callback = CheckpointCallback(save_freq=1_000, save_path='./model_checkpoints/')
 
-    TIMESTAMPS = 20_000_000  # _000
+    TIMESTAMPS = 200_000  # _000
     # model = SAC.load("rl_model_635000_steps.zip", env)
     # model = SAC.load("model_checkpoints/rl_model_650000_steps.zip", env)
     # model.tensorboard_log = "./new_tensorboard/"
@@ -86,7 +86,7 @@ def main():
     input("Press any key to start...")
     obs = env.reset()
     cumulativeReward = 0
-    plt.axis([0, 500, -20, 4500])
+    plt.axis([0, 500, -20, 1200])
     print("Started")
     # toPlotY = []
     try:
