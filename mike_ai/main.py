@@ -1,37 +1,21 @@
 import os
 import sys
-from time import time
+from time import sleep
 
 from stable_baselines.sac import LnMlpPolicy
 
 # Has to be here so the os PATH is correct for the imports
+from gym_treechop.game.physiscs import Physics
 
 sys.path.append(os.getcwd())
 
 from gym_treechop.TreeChopEnv import TreeChopEnv
 
 from stable_baselines import SAC
-from stable_baselines.common.policies import FeedForwardPolicy, LstmPolicy
 from stable_baselines.common.vec_env import DummyVecEnv
 from stable_baselines.common.callbacks import CheckpointCallback
 
 from tensorflow.python.client import device_lib
-
-
-# Custom MLP policy of three layers of size 128 each - NOT USED
-class CustomPolicy(FeedForwardPolicy):
-    def __init__(self, *args, **kwargs):
-        super(CustomPolicy, self).__init__(*args, **kwargs,
-                                           net_arch=[dict(pi=[128, 128, 128],
-                                                          vf=[128, 128, 128])],
-                                           feature_extraction="mlp")
-
-
-class CustomLSTMPolicy(LstmPolicy):
-    def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, n_lstm=64, reuse=False, **_kwargs):
-        super().__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, n_lstm, reuse,
-                         net_arch=[8, 'lstm', dict(vf=[5, 10], pi=[10])],
-                         layer_norm=True, feature_extraction="mlp", **_kwargs)
 
 
 def main():
@@ -65,18 +49,18 @@ def main():
         env=env,
         # nminibatches=1,
         # learning_rate=7.5e-3,
-        tensorboard_log="./new_tensorboard/",
+        tensorboard_log="./look_tensorboard/",
         verbose=1,
     )
 
     checkpoint_callback = CheckpointCallback(save_freq=1_000, save_path='./model_checkpoints/')
 
-    TIMESTAMPS = 200_000  # _000
+    TIMESTAMPS = 200_000_000  # _000
     # model = SAC.load("rl_model_635000_steps.zip", env)
-    # model = SAC.load("model_checkpoints/rl_model_650000_steps.zip", env)
-    # model.tensorboard_log = "./new_tensorboard/"
-    model.learn(total_timesteps=TIMESTAMPS, callback=[checkpoint_callback, ])
-    model.save(f"trained_{int(time())}_{TIMESTAMPS}.zip")
+    model = SAC.load("model_checkpoints/rl_model_205000_steps.zip", env)
+    # model.tensorboard_log = "./look_tensorboard/"
+    # model.learn(total_timesteps=TIMESTAMPS, callback=[checkpoint_callback, ])
+    # model.save(f"trained_{int(time())}_{TIMESTAMPS}.zip")
 
     print("#########################################")
     print("################ TEST: ##################")
@@ -84,42 +68,64 @@ def main():
     import matplotlib.pyplot as plt
 
     input("Press any key to start...")
-    obs = env.reset()
-    cumulativeReward = 0
-    plt.axis([0, 500, -20, 1200])
+    env = TreeChopEnv(maxGameLengthSteps=300, endAfterOneBlock=False, fixedTreeHeight=6)
+
+    # cumulativeReward = 0
+    # plt.axis([0, 5000, -20, 650])
     print("Started")
     # toPlotY = []
     try:
-        for i in range(500):  # 10 = 1 second in game
+        obs = env.reset()
+        for i in range(5000):  # 10 = 1 second in game
             action, _states = model.predict(obs)
             # print("ACTION: ", action)
 
             # action = env.action_space.sample()
 
             obs, rewards, done, info = env.step(action)
-            cumulativeReward += rewards
-            # if abs(rewards) > abs(REWARDS.TICK_PASSED):
-            #     print(f"Reward: {rewards}, done: {done}, info: {info}")
-            # print("Cumulative reward: ", cumulativeReward)
+            # cumulativeReward += rewards
 
             env.render()
 
             if done:
-                obs = env.reset()
-                cumulativeReward = 0
+                # Chop the block looking at, until chopped or look changed to another block.
+                # Physics
+                for i in range(int(1 / 0.1)):  # 0.1*10 = 1tick
+                    Physics.step(env.game, 0.1)
 
-            # Plotting reward each 10 ticks
-            # if i % 10 == 0:
-            plt.scatter(i, cumulativeReward)
+                a = env.game.getBlockInFrontOfPlayer()
+                b = env.game.getNextWoodBlock()
+                c = env.game.attackBlock(0.1)
+                # while rawEnv.game.getBlockInFrontOfPlayer()[1] == rawEnv.game.getNextWoodBlock() \
+                #         and not rawEnv.game.attackBlock(0.1):
+                while a[1] == b and not c:
+                    env.render()
+                    for i in range(int(1 / 0.1)):  # 0.1*10 = 1tick
+                        Physics.step(env.game, 0.1)
+                    a = env.game.getBlockInFrontOfPlayer()
+                    b = env.game.getNextWoodBlock()
+                    c = env.game.attackBlock(0.1)
 
-            # toPlotY.append(cumulativeReward)
-            # plt.plot(toPlotY, linestyle='solid', color='blue')
+                if env.game.getWoodLeft():
+                    env.state["done"] = False
+                    if env._isDone():
+                        obs = env.reset()
+                        cumulativeReward = 0
+                else:
+                    env.render()
+                    input("Continue...")
+                    obs = env.reset()
+                    cumulativeReward = 0
 
-            print("obs: ", obs)
+            # Plotting reward
+            # plt.scatter(i, cumulativeReward)
+
+            # print("obs: ", obs)
             # input("Press any key to continue...")
-            plt.pause(0.05)
-            # sleep(0.05)
+            # plt.pause(0.05)
+            sleep(0.05)
     except KeyboardInterrupt:
+        print("Keyboard interrupt")
         pass
     except Exception as e:
         print("EXCEPTION!")

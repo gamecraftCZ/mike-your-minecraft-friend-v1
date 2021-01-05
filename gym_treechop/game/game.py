@@ -124,14 +124,13 @@ class Game:
                 or WORLD_SHAPE.z < self.player.position.z or self.player.position.z < 0)
 
     def __init__(self, renderer=None, tree_blocks_to_generate=6) -> None:
-        self.renderer = renderer
         self.environment = np.zeros((WORLD_SHAPE.z, WORLD_SHAPE.y, WORLD_SHAPE.x), dtype=np.uint8)
         self.player = Player()
+        self.renderer = renderer
+        self._generateGround()
 
         self.attackedBlockCoords = None
         self.attackTicksRemaining = 0
-
-        self._generateGround()
 
         treeHeight = self._generateTree(tree_blocks_to_generate)
         if tree_blocks_to_generate > 4:
@@ -139,6 +138,7 @@ class Game:
             self.player.position.y = randNotInCenter(WORLD_SHAPE.y, 5)  # 0-maxY, not in center where the tree could be
 
         # print("Initialized Game")
+        print(f"----------- {self.getWoodLeft()} wood ---------------")
 
     # region Player Movement
     def forward(self):
@@ -187,7 +187,7 @@ class Game:
     attackedBlockCoords: Vec3 or None  # Which block is being attacked
     attackTicksRemaining: int  # How long is the block being attacked in Ticks
 
-    # Returns destroyed block id (AIR(0) if none)
+    # Returns destroyed block id, None otherwise
     def attackBlock(self, delta: float) -> int:
         block, coords = self.getBlockInFrontOfPlayer()
         if coords != self.attackedBlockCoords:
@@ -196,7 +196,8 @@ class Game:
         if block:
             if not self.attackedBlockCoords:
                 self.attackedBlockCoords = coords
-                self.attackTicksRemaining = BlockHardness[block] * HARDNESS_MULTIPLIER * 20
+                self.attackTicksRemaining = BlockHardness[
+                                                block] * HARDNESS_MULTIPLIER * 20 - 1e-6  # for rounding errors
 
             # Some block is attacked
             attackStrength = 20 * delta  # 20ticks per second
@@ -208,15 +209,16 @@ class Game:
             # print(f"self.attackTicksRemaining: ", self.attackTicksRemaining)
 
             if self.attackTicksRemaining <= 0:
-                self._setBlock(coords, 0)
+                self._setBlock(coords, Blocks.AIR)
                 print("Destroyed Coords: ", coords)
                 return block
 
     def stopBlockAttack(self):
         self.attackedBlockCoords = None
+        self.attackTicksRemaining = 0
 
     def getBlockInFrontOfPlayer(self, zPos: float = 1, lookingRange: float = BREAKING_RANGE,
-                                direction: Vec3 = None) -> (int, Vec3, Vec3):
+                                direction: Vec3 = None) -> (int, Vec3):
         # position = self.player.getHeadPosition()
         position = Vec3(self.player.position.x, self.player.position.y, self.player.position.z + zPos)
         if not direction:
@@ -273,7 +275,8 @@ class Game:
     def getNextWoodBlock(self) -> Vec3:
         for z in range(WORLD_SHAPE.z):
             if np.count_nonzero(self.environment[z].flatten() == Blocks.WOOD):
-                return Vec3(self.center, self.center, z)
+                return Vec3(self.center, self.center, float(z))
+        return Vec3(-1, -1, -1)
 
     def _isInEnvironment(self, pos: Vec3):
         pos = pos.floor()
@@ -298,8 +301,7 @@ class Game:
                 self.environment[pos.z, pos.y, pos.x] = block
                 self.oneHotEncodedCache = None
                 self.woodBlocksCache = None
-                if block == Blocks.WOOD:
-                    self.woodLeftCache = None
+                self.woodLeftCache = None
             return True
         else:
             return False

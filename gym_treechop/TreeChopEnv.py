@@ -16,16 +16,20 @@ from gym_treechop.game.utils import limit
 
 class REWARDS:
     # Sweeties
-    WOOD_CHOPPED = 1_000
-    LOOKING_AT_WOOD = 5  # 10x time punishment ???
-    WOOD_CHOPPING_PER_TICK = 2  # Up to reward x*10 = 20 ???
+    LOOK_AT_TARGET = 100
     BEING_CLOSE_TO_TREE = 1  # 0.05  # For closer each block closer to the center ???
-
     MOVE_REWARD = 0.01  # This will encourage Mike to move
+
+    # Deprecated sweeties
+    WOOD_CHOPPED = 0  # 1_000
+    LOOKING_AT_WOOD = 0  # 5  # 10x time punishment ???
+    WOOD_CHOPPING_PER_TICK = 0  # 2  # Up to reward x*10 = 20 ???
+
+    CHOPPING_REWARD = 0  # 0.02  # This will encourage Mike to chop
 
     # Punishments
     TICK_PASSED = -0.04
-    WRONG_BLOCK_DESTROYED = -25
+    WRONG_BLOCK_DESTROYED = -5
     DIED = 0  # -1_000  # -10_000
 
 
@@ -35,71 +39,38 @@ DELTA = 0.1
 class TreeChopEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, maxGameLengthSteps: int = 50, endAfterOneBlock: bool = True):
-        self.setup = {"max_game_length_steps": maxGameLengthSteps, "end_after_one_block": endAfterOneBlock}
-        # PPO2 algorithm does not support spaces.Tuple!
-        # self.action_space = spaces.Tuple((
-        #     spaces.Discrete(2),  # Attack 0/1
-        #     spaces.Discrete(2),  # Jump 0/1
-        #     spaces.Discrete(2),  # Forward 0/1
-        #     spaces.Discrete(2),  # Backward 0/1
-        #     spaces.Discrete(2),  # Left 0/1
-        #     spaces.Discrete(2),  # Right 0/1
-        #     spaces.Box(low=-1, high=1, shape=(1,)),  # Up/Down 0 - 1PI
-        #     spaces.Box(low=-1, high=1, shape=(1,)),  # Left/Right 0 - 2PI
-        # ))
-        action_attack = 1
-        action_forward = 1
-        action_jump = 1
-        action_left_right = 2
-        action_rotation = 2
-        actions_count = action_attack + action_forward + action_jump + action_left_right + action_rotation
-        self.action_space = spaces.Box(low=-1, high=1, shape=(actions_count,), dtype=np.float32)  # low=-1, high=1,
-        # Attack (-1; 1) - Attacks if 0.5+
-        # Jump (-1; 1) - Jumps if 0.5+
-        # Backward/Forward (-1; 1) - Backward (-0.5-), Forward (0.5+)
-        # Left/Right (-1; 1) - Left (-0.5-), Right (0.5+)
-        # Up/Down (-1; 1) - 0 - 1PI
-        # Left/Right (-1; 1) - 0 - 2PI
+    def __init__(self, maxGameLengthSteps: int = 50, endAfterOneBlock: bool = True, fixedTreeHeight: int = None):
+        self.game = Game()
+        self.renderer = None
 
-        # PPO2 algorithm does not support spaces.Tuple!
-        # self.observation_space = spaces.Tuple((
-        #     # Environment - one hot encoded
-        #     spaces.MultiBinary((WORLD_SHAPE.x, WORLD_SHAPE.y, WORLD_SHAPE.z, len(BLOCK_TYPES))),
-        #     # Player position
-        #     spaces.Box(low=0, high=1, shape=(3,), dtype=np.float32),
-        #     # Player velocity
-        #     spaces.Box(low=0, high=3.92, shape=(3,), dtype=np.float32),
-        #     # Player rotation
-        #     spaces.Box(low=0, high=1, shape=(2,), dtype=np.float32),
-        # ))
-        # world_size = 0  # WORLD_SHAPE.x * WORLD_SHAPE.y * WORLD_SHAPE.z * len(BLOCK_TYPES)  # one-hot encoded
-        # player_observations = 3 + 3 + 2  # position, velocity, rotation
-        # looking_at_block_one_hot = 4  # air, ground, wood, leaf
-        # kicking_blocks = 1  # true/false
-        # chopping = 1  # 0 - fully chopped
-        # distance_to_tree = 1
-        # wood_blocks = WORLD_SHAPE.z
-        # time_remaining = 1
-        # player_rotation = 2
+        self.setup = {
+            "max_game_length_steps": maxGameLengthSteps,
+            "end_after_one_block": endAfterOneBlock,
+            "fixed_tree_height": fixedTreeHeight
+        }
+        self.state = self._getDefaultState()  # Must be after self.game initialization!
+
+        # Action Space
+        action_attack = 1  # Attack (-1; 1) - Attacks if 0.5+
+        action_forward = 1  # Forward (-1; 1) - Forward if 0.5+
+        action_jump = 1  # Jump (-1; 1) - Jumps if 0.5+
+        action_move_left_right = 2  # Left/Right (-1; 1) - Left/Right if 0.5+
+        action_rotation = 2  # Rotation X,Y (-1; 1) - upDown 0-1PI, leftRight 0-2PI
+        actions_count = action_attack + action_forward + action_jump + action_move_left_right + action_rotation
+        self.action_space = spaces.Box(low=-1, high=1, shape=(actions_count,), dtype=np.float32)
+
+        # Observation Space
         player_velocity_upDown = 1
         distance_to_block_to_destroy = 1
         rotation_to_block_to_destroy = 2
-        looking_at = 3  # block with penalty for destroy, no penalty for destroy, reward for destroy
+        looking_at = 2  # block with penalty for destroy, no penalty for destroy
         kicking_block = 1
-        chopping_progress = 1  # 0 = fully chopped
 
         observations_count = player_velocity_upDown \
                              + distance_to_block_to_destroy + rotation_to_block_to_destroy \
-                             + looking_at + kicking_block + chopping_progress
-        # observations_count = world_size + player_observations \
-        #                      + looking_at_block_one_hot + kicking_blocks \
-        #                      + chopping + distance_to_tree + wood_blocks + time_remaining
+                             + looking_at + kicking_block
         self.observation_space = spaces.Box(low=-1, high=1, shape=(observations_count,), dtype=np.float32)
 
-        self.game = Game()
-        self.state = self._getDefaultState()
-        self.renderer = None
 
     def step(self, action: List[float]):
         actions = {
@@ -111,6 +82,7 @@ class TreeChopEnv(gym.Env):
             "rotation-up-down": action[5],
             "rotation-left-right": action[6],
         }
+        targetBlockPosition = self.game.getNextWoodBlock()
 
         reward = 0
         if not self._isDone():
@@ -132,6 +104,7 @@ class TreeChopEnv(gym.Env):
 
             # 3. Attack blocks | REWARD +- wood chopped, wrong block destroyed
             if actions["attack"]:
+                reward += REWARDS.CHOPPING_REWARD
                 block = self.game.attackBlock(DELTA)
                 if block:
                     if block == Blocks.WOOD:
@@ -139,7 +112,7 @@ class TreeChopEnv(gym.Env):
                         self.state["chopping_reward"] = 0
                         if self.setup["end_after_one_block"]:
                             self.state["done"] = True
-                        print("Chopped FULL Block")
+                        print("Chopped FULL Wood Block")
                     elif block == Blocks.LEAF:
                         pass
                     else:
@@ -156,6 +129,11 @@ class TreeChopEnv(gym.Env):
             # if block:
             #     print("Looking at: ", Blocks.toName(block))
 
+            if blockPosition == targetBlockPosition:
+                print("Block Found!")
+                self.state["done"] = True
+                reward += REWARDS.LOOK_AT_TARGET
+
             if block == Blocks.WOOD:
                 if not self.state["look"]:
                     reward += REWARDS.LOOKING_AT_WOOD
@@ -166,10 +144,10 @@ class TreeChopEnv(gym.Env):
                     TICKS_TO_DESTROY_WOOD = BlockHardness[Blocks.WOOD] * HARDNESS_MULTIPLIER * 20
                     rewardToGet = max(1, (
                             TICKS_TO_DESTROY_WOOD - self.game.attackTicksRemaining))
-                    rewardToGet = math.log(rewardToGet + 1) * REWARDS.WOOD_CHOPPING_PER_TICK
+                    rewardToGet = math.log(rewardToGet / 2 + 1) * 2 * REWARDS.WOOD_CHOPPING_PER_TICK
                     reward += rewardToGet
                     self.state["chopping_reward"] += rewardToGet
-                    # print(f"Hit Wood. remaining: {self.game.attackTicksRemaining}, reward: {rewardToGet}")
+                    print(f"Hit Wood. remaining: {self.game.attackTicksRemaining}, reward: {rewardToGet}")
 
             else:
                 if self.state["look"]:
@@ -180,7 +158,7 @@ class TreeChopEnv(gym.Env):
             if blockPosition != self.state["latest_look_block_pos"] or self.game.attackTicksRemaining <= 0:
                 # stopped chopping
                 if self.state["chopping_reward"]:
-                    # print("UnHit Wood")
+                    print("UnHit Wood")
                     reward -= self.state["chopping_reward"]  # / 2
                     self.state["chopping_reward"] = 0
 
@@ -204,7 +182,7 @@ class TreeChopEnv(gym.Env):
 
         self.state["steps_passed"] += 1
 
-        info = {"wood_left": self.game.getWoodLeft()}
+        info = {"wood_left": self.game.getWoodLeft(), "self": self}
         obs = self._getObservation()
         done = self._isDone()
         return obs, reward, done, info
@@ -214,7 +192,9 @@ class TreeChopEnv(gym.Env):
 
     def reset(self):
         del self.game
-        self.game = Game(tree_blocks_to_generate=randint(1, 6))  # Create new game, tree has 1-6 lock remaining
+        # Create new game, tree has 1-6 lock remaining
+        self.game = Game(tree_blocks_to_generate=self.setup["fixed_tree_height"] or randint(1, 6))
+
         self.state = self._getDefaultState()
         return self._getObservation()
 
@@ -266,20 +246,13 @@ class TreeChopEnv(gym.Env):
         # looking_at [ground, wood, leaf]
         lookingBlock, blockPos = self.game.getBlockInFrontOfPlayer()
         obs = np.append(obs, 1 if lookingBlock == Blocks.GROUND else 0)  # Penalty for destroy
-        obs = np.append(obs, 1 if blockPos == self.game.getNextWoodBlock().z else 0)  # Reward for destroy
-        obs = np.append(obs,
-                        1 if lookingBlock == Blocks.LEAF or lookingBlock == Blocks.WOOD else 0)  # No penalty, No reward
+        obs = np.append(obs, 1 if lookingBlock == Blocks.LEAF or lookingBlock == Blocks.WOOD else 0)  # No penalty
 
         # kicking_block - Is kicking to some block, either Ground, Wood or Leaf
         lookingDirection = self.game.player.getLookingDirectionVector()
         lookingDirection.z = 0
         kickingBlock, blockPos = self.game.getBlockInFrontOfPlayer(0, 0.5, lookingDirection)
         obs = np.append(obs, 1 if kickingBlock else 0)
-
-        # chopping_progress
-        obs = np.append(obs, 1 - (self.game.attackTicksRemaining
-                                  / (BlockHardness[lookingBlock]
-                                     * HARDNESS_MULTIPLIER)) if self.game.attackTicksRemaining else -1)
 
         # Clip everything in range -1 to 1
         return obs.clip(-1, 1)
