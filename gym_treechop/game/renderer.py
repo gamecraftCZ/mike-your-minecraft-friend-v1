@@ -3,10 +3,14 @@ from typing import List
 import vpython
 from vpython import vector as v
 
-from gym_treechop.game.constants import WORLD_SHAPE
+from gym_treechop.game.constants import WORLD_SHAPE, Blocks
 from gym_treechop.game.game import Game
 
-BLOCK_COLORS = {1: v(0.9, 0.7, 0.5), 2: v(0.8, 0.8, 0.4), 3: vpython.color.green}
+BLOCK_COLORS = {
+    Blocks.GROUND: v(0.9, 0.7, 0.5),
+    Blocks.WOOD: v(0.8, 0.8, 0.4),
+    Blocks.LEAF: vpython.color.green
+}
 
 LOOK_LENGTH = 4.5
 
@@ -27,9 +31,13 @@ class Renderer:
                     if block:
                         old.visible = True
                         color = BLOCK_COLORS[block]
+                        opacity = 0.3 if block == Blocks.LEAF else 1
 
                         if old.color != color:
                             old.color = color
+
+                        if old.opacity != opacity:
+                            old.opacity = opacity
 
                     elif old:
                         old.visible = False
