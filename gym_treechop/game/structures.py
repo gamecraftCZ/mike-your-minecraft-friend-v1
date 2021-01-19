@@ -11,10 +11,10 @@ class Axis(Enum):
 
 
 class Vec2:
-    x: int or float = 0
-    y: int or float = 0
+    x: float = 0
+    y: float = 0
 
-    def __init__(self, x=0, y=0):
+    def __init__(self, x: float = 0, y: float = 0):
         self.x = x
         self.y = y
 
@@ -41,12 +41,29 @@ class Vec2:
         else:
             return False
 
-class Vec3:
-    x: int or float = 0
-    y: int or float = 0
-    z: int or float = 0  # Z coordinate is elevation (up/down)
+    def __truediv__(self, other: 'Vec2' or float):
+        if isinstance(other, Vec2):
+            # Vec2 / Vec2
+            return Vec2(self.x / other.x, self.y / other.y)
+        else:
+            # Vec2 / float
+            return Vec2(self.x / other, self.y / other)
 
-    def __init__(self, x=0, y=0, z=0):
+    def normalize(self) -> 'Vec2':
+        # Normalize vector to has one of the directions == 1 or -1
+        m = max(abs(self.x), abs(self.y))
+        if m:
+            return self / m
+        else:
+            return Vec2(1, 1)
+
+
+class Vec3:
+    x: float = 0
+    y: float = 0
+    z: float = 0  # Z coordinate is elevation (up/down)
+
+    def __init__(self, x: float = 0, y: float = 0, z: float = 0):
         self.x = x
         self.y = y
         self.z = z
@@ -60,7 +77,7 @@ class Vec3:
             return Vec2(self.x, self.y)
 
     @staticmethod
-    def fromVec2(vec2: Vec2, ignoredAxis: Axis, ignoredValue: int or 'Vec3') -> 'Vec3':
+    def fromVec2(vec2: Vec2, ignoredAxis: Axis = Axis.z, ignoredValue: int or 'Vec3' = 0) -> 'Vec3':
         if isinstance(ignoredValue, Vec3):
             if ignoredAxis == Axis.x:
                 ignoredValue = ignoredValue.x
@@ -102,3 +119,19 @@ class Vec3:
             return self.x == other.x and self.y == other.y and self.z == other.z
         else:
             return False
+
+    def __truediv__(self, other: 'Vec3' or float):
+        if isinstance(other, Vec3):
+            # Vec3 / Vec3
+            return Vec3(self.x / other.x, self.y / other.y, self.z / other.z)
+        else:
+            # Vec3 / float
+            return Vec3(self.x / other, self.y / other, self.z / other)
+
+    def normalize(self) -> 'Vec3':
+        # Normalize vector to has one of the directions == 1
+        m = max(abs(self.x), abs(self.y), abs(self.z))
+        if m:
+            return self / m
+        else:
+            return Vec3(1, 1, 1)

@@ -48,7 +48,13 @@ class Player:
         z = math.sin(self.rotation.y - math.pi / 2)
         zRot = math.cos(self.rotation.y - math.pi / 2)
 
-        return Vec3(x * zRot, y * zRot, z)
+        vec = Vec3(x * zRot, y * zRot, z)
+        return vec.normalize()
+
+    def getLookingDirectionVector2d(self) -> Vec2:
+        y = math.sin(self.rotation.x)
+        x = math.cos(self.rotation.x)
+        return Vec2(x, y).normalize()
 
 
 class Game:

@@ -249,8 +249,8 @@ class TreeChopEnv(gym.Env):
         obs = np.append(obs, 1 if lookingBlock == Blocks.LEAF or lookingBlock == Blocks.WOOD else 0)  # No penalty
 
         # kicking_block - Is kicking to some block, either Ground, Wood or Leaf
-        lookingDirection = self.game.player.getLookingDirectionVector()
-        lookingDirection.z = 0
+        lookingDirection = self.game.player.getLookingDirectionVector2d()
+        lookingDirection = Vec3.fromVec2(lookingDirection)
         kickingBlock, blockPos = self.game.getBlockInFrontOfPlayer(0, 0.5, lookingDirection)
         obs = np.append(obs, 1 if kickingBlock else 0)
 
@@ -258,13 +258,16 @@ class TreeChopEnv(gym.Env):
         return obs.clip(-1, 1)
 
     def _getDefaultState(self):
-        return {"center": self.game.getPlayerDistanceToCenter(),
-                "look": False,
-                "chopping_reward": 0,
-                "steps_passed": 0,
-                "latest_look_block_pos": None,
-                "to_destroy": Vec3(4, 4, 1),
-                "done": False}
+        return {
+            "center": self.game.getPlayerDistanceToCenter(),
+            "look": False,
+            "chopping_reward": 0,
+            "looking_reward": 0,
+            "steps_passed": 0,
+            "latest_look_block_pos": None,
+            "to_destroy": Vec3(4, 4, 1),
+            "done": False
+        }
 
     def _isDone(self) -> bool:
         return self.state["done"] \
