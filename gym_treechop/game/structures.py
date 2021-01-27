@@ -135,3 +135,68 @@ class Vec3:
             return self / m
         else:
             return Vec3(1, 1, 1)
+
+    def length(self) -> float:
+        return math.sqrt(self.x ** 2 + self.y ** 2 + self.z ** 2)
+
+    # rotate tables for testing:
+    # upDown, leftRight - in radians
+    def rotate(self, upDown: float, leftRight: float) -> 'Vec3':
+        # Convert to length of vector and its angles
+        l = self.length()
+        if l == 0:
+            return Vec3()
+
+        x = abs(self.x)
+        y = abs(self.y)
+        z = abs(self.z)
+
+        alpha = math.atan(y / (x or 0.000000000000001))
+        beta = math.asin(z / l)
+
+        if self.x > 0 and self.y > 0:
+            pass
+        if self.x < 0 and self.y > 0:
+            alpha = math.pi - alpha
+        if self.x < 0 and self.y < 0:
+            alpha += math.pi
+        if self.x > 0 and self.y < 0:
+            alpha = math.tau - alpha
+
+        if self.z < 0:
+            beta = -beta
+
+        # Add angles
+        beta = math.copysign(abs(beta + upDown) % math.pi, (beta + upDown))
+
+        flip = False
+        if beta > math.pi / 2 or beta < -math.pi / 2:
+            flip = True
+            if beta > 0:
+                beta = math.pi - beta
+            else:
+                beta = -math.pi - beta
+            alpha += math.pi
+
+        alpha = (alpha + leftRight) % math.tau
+
+        # Convert back to vector
+        outZ = l * math.sin(beta)
+        m = math.sqrt(l ** 2 - outZ ** 2)
+        outY = m * math.sin(alpha)
+        outX = math.sqrt(m ** 2 - outY ** 2)
+
+        outX = math.copysign(outX, self.x)
+        outY = math.copysign(outY, self.y)
+        if flip:
+            outX = -outX
+            outY = -outY
+
+        outX = abs(outX)
+        if math.pi / 2 < alpha < math.pi / 2 * 3:
+            outX = -outX
+        outY = abs(outY)
+        if alpha > math.pi:
+            outY = -outY
+
+        return Vec3(outX, outY, outZ)
