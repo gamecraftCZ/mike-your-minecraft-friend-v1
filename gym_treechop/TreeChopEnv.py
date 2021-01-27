@@ -56,8 +56,10 @@ class TreeChopEnv(gym.Env):
         action_forward = 1  # Forward (-1; 1) - Forward if 0.5+
         action_jump = 1  # Jump (-1; 1) - Jumps if 0.5+
         action_move_left_right = 2  # Left/Right (-1; 1) - Left/Right if 0.5+
-        action_rotation = 4  # Rotation X(left/right) ,Y( (-1; 1) - upDown 0-1PI, leftRight 0-2PI
-        actions_count = action_attack + action_forward + action_jump + action_move_left_right + action_rotation
+        action_rotation_small = 4  # Rotation of 5°  X(left/right) ,Y( (-1; 1) - upDown 0-1PI, leftRight 0-2PI
+        action_rotation_large = 4  # Rotation of 10° X(left/right) ,Y( (-1; 1) - upDown 0-1PI, leftRight 0-2PI
+        actions_count = action_attack + action_forward + action_jump \
+                        + action_move_left_right + action_rotation_small + action_rotation_large
         self.action_space = spaces.Box(low=-1, high=1, shape=(actions_count,), dtype=np.float32)
 
         # Observation Space
@@ -65,7 +67,7 @@ class TreeChopEnv(gym.Env):
         distance_to_block_to_destroy = 1
         rotation_to_block_to_destroy = 2
         looking_at = 2  # block with penalty for destroy / no penalty for destroy
-        viewport = 64 * 64  # Distance to blocks in front of Mike 64x64 - 128° field of view -> 1 point / 2°
+        viewport = VIEWPORT_RES_X * VIEWPORT_RES_Y  # Distance to blocks in front of Mike 64x64 - 128° field of view -> 1 point / 2°
 
         observations_count = player_velocity_upDown \
                              + distance_to_block_to_destroy + rotation_to_block_to_destroy \
@@ -84,6 +86,10 @@ class TreeChopEnv(gym.Env):
             "rotation-down": action[6],
             "rotation-left": action[7],
             "rotation-right": action[8],
+            "rotation-up-large": action[9],
+            "rotation-down-large": action[10],
+            "rotation-left-large": action[11],
+            "rotation-right-large": action[12],
         }
         targetBlockPosition = self.game.getNextWoodBlock()
 
@@ -97,11 +103,17 @@ class TreeChopEnv(gym.Env):
                 self.game.forward()
                 reward += REWARDS.MOVE_REWARD
 
-            # # 1.2. Look - discrete actions
+            # # 1.2. Look (0.1rad = 5.7°) - discrete actions
             if actions["rotation-up"] > 0.5: self.game.lookUpDown(self.game.player.rotation.y + 0.1)
             if actions["rotation-down"] > 0.5: self.game.lookUpDown(self.game.player.rotation.y - 0.1)
             if actions["rotation-right"] > 0.5: self.game.lookLeftRight(self.game.player.rotation.x + 0.1)
             if actions["rotation-left"] > 0.5: self.game.lookLeftRight(self.game.player.rotation.x - 0.1)
+
+            # # 1.2. Look large (0.2rad = 11.4°) - discrete actions
+            if actions["rotation-up-large"] > 0.5: self.game.lookUpDown(self.game.player.rotation.y + 0.2)
+            if actions["rotation-down-large"] > 0.5: self.game.lookUpDown(self.game.player.rotation.y - 0.2)
+            if actions["rotation-right-large"] > 0.5: self.game.lookLeftRight(self.game.player.rotation.x + 0.2)
+            if actions["rotation-left-large"] > 0.5: self.game.lookLeftRight(self.game.player.rotation.x - 0.2)
 
             # # 1.2. Look - exact
             # self.game.player.rotation.y = (actions["rotation-up-down"] + 1) / 2 * math.pi  # -1 - 1 -> 0-2 -> 0-1PI
