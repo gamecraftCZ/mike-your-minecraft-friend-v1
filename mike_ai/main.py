@@ -5,8 +5,6 @@ from time import time
 from stable_baselines.common.policies import MlpLstmPolicy
 
 # Has to be here so the os PATH is correct for the imports
-from gym_treechop.game.physiscs import Physics
-
 sys.path.append(os.getcwd())
 
 from gym_treechop.TreeChopEnv import TreeChopEnv
