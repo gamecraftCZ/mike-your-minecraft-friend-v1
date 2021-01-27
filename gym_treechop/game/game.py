@@ -4,13 +4,90 @@ from random import random, randint
 from typing import List
 
 import numpy as np
+from numba import jit
 from tensorflow.python.keras.utils import to_categorical
 
 from gym_treechop.game.constants import MIN_TREE_HEIGHT, WORLD_SHAPE, MAX_TREE_HEIGHT, Blocks, JUMP_VELOCITY, \
-    WALK_VELOCITY, BLOCK_TYPES, BlockHardness, HARDNESS_MULTIPLIER, BREAKING_RANGE
+    WALK_VELOCITY, BLOCK_TYPES, BlockHardness, HARDNESS_MULTIPLIER, BREAKING_RANGE, WORLD_SHAPE_TUPLE
 from gym_treechop.game.structures import Vec3, Vec2, Axis
-from gym_treechop.game.utils import playerIsStanding
+from gym_treechop.game.utils import playerIsStanding, getDistance
 
+
+##### NUMBA functions #####
+@jit(nopython=True)
+def numba_getBlock(environment: np.ndarray, pos: (float, float, float)) -> int:
+    pos = (math.floor(pos[0]), math.floor(pos[1]), math.floor(pos[2]))
+    if numba_isInEnvironment(pos):
+        return environment[pos[2], pos[1], pos[0]]
+    else:
+        return 0
+
+
+@jit(nopython=True)
+def numba_isInEnvironment(pos: (float, float, float)):
+    posX = math.floor(pos[0])
+    posY = math.floor(pos[1])
+    posZ = math.floor(pos[2])
+    if (WORLD_SHAPE_TUPLE[0] <= posX or posX < 0
+            or WORLD_SHAPE_TUPLE[1] <= posY or posY < 0
+            or WORLD_SHAPE_TUPLE[2] <= posZ or posZ < 0):
+        return False
+    else:
+        return True
+
+
+@jit(nopython=True)
+def numba_getNextBlock(pos: (float, float, float),
+                       vec: (float, float, float)) -> ((float, float, float), (float, float, float)):
+    toFullX = copysign((copysign(1 - (pos[0] % 1), vec[0]) % 1), vec[0])
+    toFullY = copysign((copysign(1 - (pos[1] % 1), vec[1]) % 1), vec[1])
+    toFullZ = copysign((copysign(1 - (pos[2] % 1), vec[2]) % 1), vec[2])
+
+    toFullX = toFullX or copysign(1, toFullX)
+    toFullY = toFullY or copysign(1, toFullY)
+    toFullZ = toFullZ or copysign(1, toFullZ)
+
+    relativeX = toFullX / (vec[0] or 0.00000000001)
+    relativeY = toFullY / (vec[1] or 0.00000000001)
+    relativeZ = toFullZ / (vec[2] or 0.00000000001)
+
+    relativeMove = min(relativeX, relativeY, relativeZ)
+
+    movedX = pos[0] + vec[0] * relativeMove
+    movedY = pos[1] + vec[1] * relativeMove
+    movedZ = pos[2] + vec[2] * relativeMove
+
+    rayX, rayY, rayZ = movedX, movedY, movedZ
+
+    if relativeMove == relativeX:
+        movedX = float(round(movedX))
+    if relativeMove == relativeY:
+        movedY = float(round(movedY))
+    if relativeMove == relativeZ:
+        movedZ = float(round(movedZ))
+
+    return (movedX, movedY, movedZ), (rayX, rayY, rayZ)
+
+
+@jit(nopython=True)
+def numba_getBlockDistance(pos: (float, float, float), vec: (float, float, float),
+                           maxDistance: float, environment: np.ndarray) -> float:
+    blockPos, rayPos = numba_getNextBlock(pos, vec)
+    while True:
+        distanceToBlock = getDistance(pos, rayPos)
+        if not numba_isInEnvironment(blockPos):
+            return maxDistance
+
+        if distanceToBlock > maxDistance:
+            return maxDistance
+
+        if numba_getBlock(environment, blockPos) != 0:
+            return distanceToBlock
+
+        blockPos, rayPos = numba_getNextBlock(blockPos, vec)
+
+
+##### REST of the CODE #####
 
 def randNotInCenter(size: int, centerDiameter: int = 1):
     # 0, 1, _2_, 3, __4__, 5, _6_, 7, 8
@@ -230,7 +307,7 @@ class Game:
         if not direction:
             direction = self.player.getLookingDirectionVector()
 
-        blockPos = self.__getNextBlock(position, direction)
+        blockPos, _ = self.__getNextBlock(position, direction)
         while True:
             if not self._isInEnvironment(blockPos):
                 return 0, None
@@ -244,37 +321,24 @@ class Game:
 
             # self._setBlock(blockPos, Blocks.WOOD) # DEBUG
             # self.renderer.render(self) # DEBUG
-            blockPos = self.__getNextBlock(blockPos, direction)
+            blockPos, _ = self.__getNextBlock(blockPos, direction)
+
+    def getBlockDistance(self, position: Vec3 = None, vector: Vec3 = None, maxDistance: float = 8) -> float:
+        if not position:
+            position = self.player.getHeadPosition()
+        if not vector:
+            vector = self.player.getLookingDirectionVector()
+
+        vector = vector.normalize()
+
+        return numba_getBlockDistance((position.x, position.y, position.z),
+                                      (vector.x, vector.y, vector.z), maxDistance, self.environment)
 
     @staticmethod
-    def __getNextBlock(position: Vec3, direction: Vec3) -> Vec3:
-        toFullX = copysign((copysign(1 - (position.x % 1), direction.x) % 1), direction.x)
-        toFullY = copysign((copysign(1 - (position.y % 1), direction.y) % 1), direction.y)
-        toFullZ = copysign((copysign(1 - (position.z % 1), direction.z) % 1), direction.z)
-
-        toFullX = toFullX or copysign(1, toFullX)
-        toFullY = toFullY or copysign(1, toFullY)
-        toFullZ = toFullZ or copysign(1, toFullZ)
-
-        relativeX = toFullX / (direction.x or 0.00000000001)
-        relativeY = toFullY / (direction.y or 0.00000000001)
-        relativeZ = toFullZ / (direction.z or 0.00000000001)
-
-        relativeMove = min(relativeX, relativeY, relativeZ)
-
-        moved = position.copy()
-        moved.x += direction.x * relativeMove
-        moved.y += direction.y * relativeMove
-        moved.z += direction.z * relativeMove
-
-        if relativeMove == relativeX:
-            moved.x = float(round(moved.x))
-        if relativeMove == relativeY:
-            moved.y = float(round(moved.y))
-        if relativeMove == relativeZ:
-            moved.z = float(round(moved.z))
-
-        return moved
+    # returns (blockPosition, rayCollisionWithTheBLock)
+    def __getNextBlock(pos: Vec3, direct: Vec3) -> (Vec3, Vec3):
+        (x, y, z), (rX, rY, rZ) = numba_getNextBlock((pos.x, pos.y, pos.z), (direct.x, direct.y, direct.z))
+        return Vec3(x, y, z), Vec3(rX, rY, rZ)
 
     # endregion
 

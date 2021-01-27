@@ -34,6 +34,7 @@ NOT_STANDING_BREAK_SLOWDOWN = 5  # When not standing the block is broken 5x long
 
 # Environment is 9x9x9 blocks -> 729 blocks in total
 WORLD_SHAPE = Vec3(9, 9, 9)
+WORLD_SHAPE_TUPLE = (WORLD_SHAPE.x, WORLD_SHAPE.y, WORLD_SHAPE.z)
 
 PLAYER_RADIUS = 0.3
 PLAYER_HEIGHT = 1.8

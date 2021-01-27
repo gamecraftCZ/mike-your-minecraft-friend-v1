@@ -2,6 +2,7 @@ import math
 from enum import Enum
 
 import numpy as np
+from numba import jit
 
 
 class Axis(Enum):
@@ -139,31 +140,30 @@ class Vec3:
     def length(self) -> float:
         return math.sqrt(self.x ** 2 + self.y ** 2 + self.z ** 2)
 
-    # rotate tables for testing:
-    # upDown, leftRight - in radians
-    def rotate(self, upDown: float, leftRight: float) -> 'Vec3':
-        # Convert to length of vector and its angles
-        l = self.length()
+    @staticmethod
+    @jit(nopython=True)
+    def __numba_rotate(vX, vY, vZ, upDown: float, leftRight: float) -> (float, float, float):
+        l = math.sqrt(vX ** 2 + vY ** 2 + vZ ** 2)
         if l == 0:
-            return Vec3()
+            return 0, 0, 0
 
-        x = abs(self.x)
-        y = abs(self.y)
-        z = abs(self.z)
+        x = abs(vX)
+        y = abs(vY)
+        z = abs(vZ)
 
         alpha = math.atan(y / (x or 0.000000000000001))
         beta = math.asin(z / l)
 
-        if self.x > 0 and self.y > 0:
+        if vX > 0 and vY > 0:
             pass
-        if self.x < 0 and self.y > 0:
+        if vX < 0 and vY > 0:
             alpha = math.pi - alpha
-        if self.x < 0 and self.y < 0:
+        if vX < 0 and vY < 0:
             alpha += math.pi
-        if self.x > 0 and self.y < 0:
+        if vX > 0 and vY < 0:
             alpha = math.tau - alpha
 
-        if self.z < 0:
+        if vZ < 0:
             beta = -beta
 
         # Add angles
@@ -186,8 +186,8 @@ class Vec3:
         outY = m * math.sin(alpha)
         outX = math.sqrt(m ** 2 - outY ** 2)
 
-        outX = math.copysign(outX, self.x)
-        outY = math.copysign(outY, self.y)
+        outX = math.copysign(outX, vX)
+        outY = math.copysign(outY, vY)
         if flip:
             outX = -outX
             outY = -outY
@@ -199,4 +199,10 @@ class Vec3:
         if alpha > math.pi:
             outY = -outY
 
-        return Vec3(outX, outY, outZ)
+        return outX, outY, outZ
+
+    # rotate tables for testing:
+    # upDown, leftRight - in radians
+    def rotate(self, upDown: float, leftRight: float) -> 'Vec3':
+        x, y, z = self.__numba_rotate(self.x, self.y, self.z, upDown, leftRight)
+        return Vec3(x, y, z)
