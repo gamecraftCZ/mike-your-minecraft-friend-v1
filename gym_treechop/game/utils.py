@@ -2,6 +2,7 @@ import math
 from typing import List
 
 import numpy as np
+from numba import jit
 
 from gym_treechop.game.constants import WORLD_SHAPE, PLAYER_RADIUS, Blocks
 from gym_treechop.game.structures import Vec2, Vec3, Axis
@@ -76,3 +77,11 @@ def nthRoot(number: float, exponent: float) -> float:
     num = abs(number)
     result = num ** (1 / float(exponent))
     return math.copysign(result, number)
+
+
+@jit(nopython=True)
+def getDistance(fromPos: (float, float, float), toPos: (float, float, float)) -> float:
+    lengthX = fromPos[0] - toPos[0]
+    lengthY = fromPos[1] - toPos[1]
+    lengthZ = fromPos[2] - toPos[2]
+    return math.sqrt(lengthX ** 2 + lengthY ** 2 + lengthZ ** 2)

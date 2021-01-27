@@ -24,7 +24,7 @@ def main():
     print(device_lib.list_local_devices())
     print("####################################")
 
-    env = TreeChopEnv(maxGameLengthSteps=60)
+    env = TreeChopEnv(maxGameLengthSteps=100)  # Give mike 10 seconds to find the block
     # Optional: PPO2 requires a vectorized environment to run
     # the env is now wrapped automatically when passing it to the constructor
     env = DummyVecEnv([lambda: env])
@@ -65,8 +65,8 @@ def main():
     checkpoint_callback = CheckpointCallback(save_freq=1_000, save_path='./model_checkpoints/')
 
     TIMESTAMPS = 200_000_000  # _000
-    # model = PPO2.load("rl_model_373000_steps.zip", env, tensorboard_log="./hhhhhhh_tensorboard/")
-    # model = PPO2.load("model_checkpoints/rl_model_205000_steps.zip", env, tensorboard_log="./hhhhhhh_tensorboard/")
+    # model = PPO2.load("rl_model_373000_steps.zip", env, tensorboard_log="./hh_tensorboard/")
+    # model = PPO2.load("model_checkpoints/rl_model_205000_steps.zip", env, tensorboard_log="./hh_tensorboard/")
     model.learn(total_timesteps=TIMESTAMPS, callback=[checkpoint_callback, ], reset_num_timesteps=False)
     model.save(f"trained_{int(time())}_{TIMESTAMPS}.zip")
 

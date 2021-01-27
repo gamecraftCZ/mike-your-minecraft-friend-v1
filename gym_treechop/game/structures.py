@@ -1,5 +1,6 @@
 import math
 from enum import Enum
+from typing import Tuple
 
 import numpy as np
 from numba import jit
@@ -63,6 +64,13 @@ class Vec3:
     x: float = 0
     y: float = 0
     z: float = 0  # Z coordinate is elevation (up/down)
+
+    def asTuple(self) -> Tuple[float, float, float]:
+        return (self.x, self.y, self.z)
+
+    @staticmethod
+    def fromTuple(tup: Tuple[float, float, float]) -> 'Vec3':
+        return Vec3(tup[0], tup[1], tup[2])
 
     def __init__(self, x: float = 0, y: float = 0, z: float = 0):
         self.x = x
@@ -140,69 +148,73 @@ class Vec3:
     def length(self) -> float:
         return math.sqrt(self.x ** 2 + self.y ** 2 + self.z ** 2)
 
-    @staticmethod
-    @jit(nopython=True)
-    def __numba_rotate(vX, vY, vZ, upDown: float, leftRight: float) -> (float, float, float):
-        l = math.sqrt(vX ** 2 + vY ** 2 + vZ ** 2)
-        if l == 0:
-            return 0, 0, 0
-
-        x = abs(vX)
-        y = abs(vY)
-        z = abs(vZ)
-
-        alpha = math.atan(y / (x or 0.000000000000001))
-        beta = math.asin(z / l)
-
-        if vX > 0 and vY > 0:
-            pass
-        if vX < 0 and vY > 0:
-            alpha = math.pi - alpha
-        if vX < 0 and vY < 0:
-            alpha += math.pi
-        if vX > 0 and vY < 0:
-            alpha = math.tau - alpha
-
-        if vZ < 0:
-            beta = -beta
-
-        # Add angles
-        beta = math.copysign(abs(beta + upDown) % math.pi, (beta + upDown))
-
-        flip = False
-        if beta > math.pi / 2 or beta < -math.pi / 2:
-            flip = True
-            if beta > 0:
-                beta = math.pi - beta
-            else:
-                beta = -math.pi - beta
-            alpha += math.pi
-
-        alpha = (alpha + leftRight) % math.tau
-
-        # Convert back to vector
-        outZ = l * math.sin(beta)
-        m = math.sqrt(l ** 2 - outZ ** 2)
-        outY = m * math.sin(alpha)
-        outX = math.sqrt(m ** 2 - outY ** 2)
-
-        outX = math.copysign(outX, vX)
-        outY = math.copysign(outY, vY)
-        if flip:
-            outX = -outX
-            outY = -outY
-
-        outX = abs(outX)
-        if math.pi / 2 < alpha < math.pi / 2 * 3:
-            outX = -outX
-        outY = abs(outY)
-        if alpha > math.pi:
-            outY = -outY
-
-        return outX, outY, outZ
-
     # rotate tables for testing:
     # upDown, leftRight - in radians
     def rotate(self, upDown: float, leftRight: float) -> 'Vec3':
-        x, y, z = self.__numba_rotate(self.x, self.y, self.z, upDown, leftRight)
+        x, y, z = numba_Vec3Rotate((self.x, self.y, self.z), upDown, leftRight)
         return Vec3(x, y, z)
+
+
+@jit(nopython=True)
+def numba_Vec3Rotate(vector: (float, float, float), upDown: float, leftRight: float) -> (float, float, float):
+    vX = vector[0]
+    vY = vector[1]
+    vZ = vector[2]
+
+    l = math.sqrt(vX ** 2 + vY ** 2 + vZ ** 2)
+    if l == 0:
+        return 0, 0, 0
+
+    x = abs(vX)
+    y = abs(vY)
+    z = abs(vZ)
+
+    alpha = math.atan(y / (x or 0.000000000000001))
+    beta = math.asin(z / l)
+
+    if vX > 0 and vY > 0:
+        pass
+    if vX < 0 and vY > 0:
+        alpha = math.pi - alpha
+    if vX < 0 and vY < 0:
+        alpha += math.pi
+    if vX > 0 and vY < 0:
+        alpha = math.tau - alpha
+
+    if vZ < 0:
+        beta = -beta
+
+    # Add angles
+    beta = math.copysign(abs(beta + upDown) % math.pi, (beta + upDown))
+
+    flip = False
+    if beta > math.pi / 2 or beta < -math.pi / 2:
+        flip = True
+        if beta > 0:
+            beta = math.pi - beta
+        else:
+            beta = -math.pi - beta
+        alpha += math.pi
+
+    alpha = (alpha + leftRight) % math.tau
+
+    # Convert back to vector
+    outZ = l * math.sin(beta)
+    m = math.sqrt(l ** 2 - outZ ** 2)
+    outY = m * math.sin(alpha)
+    outX = math.sqrt(m ** 2 - outY ** 2)
+
+    outX = math.copysign(outX, vX)
+    outY = math.copysign(outY, vY)
+    if flip:
+        outX = -outX
+        outY = -outY
+
+    outX = abs(outX)
+    if math.pi / 2 < alpha < math.pi / 2 * 3:
+        outX = -outX
+    outY = abs(outY)
+    if alpha > math.pi:
+        outY = -outY
+
+    return outX, outY, outZ

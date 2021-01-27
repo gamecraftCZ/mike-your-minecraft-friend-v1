@@ -5,12 +5,13 @@ from typing import List
 import gym
 import numpy as np
 from gym import spaces
+from numba import jit
 
 from gym_treechop.game.constants import Blocks
-from gym_treechop.game.game import Game
+from gym_treechop.game.game import Game, numba_getBlockDistance
 from gym_treechop.game.physiscs import Physics
 from gym_treechop.game.renderer import Renderer
-from gym_treechop.game.structures import Vec3
+from gym_treechop.game.structures import Vec3, numba_Vec3Rotate
 from gym_treechop.game.utils import limit, playerIsStanding
 
 
@@ -63,12 +64,12 @@ class TreeChopEnv(gym.Env):
         player_velocity_upDown = 1
         distance_to_block_to_destroy = 1
         rotation_to_block_to_destroy = 2
-        looking_at = 2  # block with penalty for destroy, no penalty for destroy
-        kicking_block = 1
+        looking_at = 2  # block with penalty for destroy / no penalty for destroy
+        viewport = 64 * 64  # Distance to blocks in front of Mike 64x64 - 128° field of view -> 1 point / 2°
 
         observations_count = player_velocity_upDown \
                              + distance_to_block_to_destroy + rotation_to_block_to_destroy \
-                             + looking_at + kicking_block
+                             + looking_at + viewport
         self.observation_space = spaces.Box(low=-1, high=1, shape=(observations_count,), dtype=np.float32)
 
 
@@ -199,13 +200,6 @@ class TreeChopEnv(gym.Env):
     def _getObservation(self):
         obs = np.array([])  # self.game.getEnvironmentOneHotEncoded().flatten()
 
-        # player_rotation - leftRight
-        # obs = np.append(obs, (self.game.player.rotation.x - math.pi) / math.pi)  # 0 - 2PI -> -1PI - 1PI -> -1 - 1
-
-        # player_rotation - upDown
-        # obs = np.append(obs, (self.game.player.rotation.y - (math.pi / 2)) / (
-        #         math.pi / 2))  # 0 - 1PI -> -0.5PI - 0.5PI -> -1 - 1
-
         # player_velocity_upDown - only up/down
         obs = np.append(obs, self.game.player.velocity.z / 3.92)  # Terminal velocity = 3.92 -> -1 - 1
 
@@ -236,11 +230,13 @@ class TreeChopEnv(gym.Env):
         obs = np.append(obs, 1 if lookingBlock == Blocks.GROUND else 0)  # Penalty for destroy
         obs = np.append(obs, 1 if lookingBlock == Blocks.LEAF or lookingBlock == Blocks.WOOD else 0)  # No penalty
 
-        # kicking_block - Is kicking to some block, either Ground, Wood or Leaf
-        lookingDirection = self.game.player.getLookingDirectionVector2d()
-        lookingDirection = Vec3.fromVec2(lookingDirection)
-        kickingBlock, blockPos = self.game.getBlockInFrontOfPlayer(0, 0.5, lookingDirection)
-        obs = np.append(obs, 1 if kickingBlock else 0)
+        # viewport - Distance to blocks in front of Mike 64x64 - 128° field of view -> 1point/2°x2°, max block dis.=8
+        lookingVector = self.game.player.getLookingDirectionVector()
+        viewport = numba_getViewport(lookingVector.asTuple(), self.game.environment,
+                                     self.game.player.position.asTuple())
+
+        viewport = np.array(viewport).flatten()
+        obs = np.append(obs, viewport)
 
         # Clip everything in range -1 to 1
         return obs.clip(-1, 1)
@@ -262,3 +258,32 @@ class TreeChopEnv(gym.Env):
                or self.game.isGameOver() \
                or self.game.getWoodLeft() == 0 \
                or self.state["steps_passed"] >= self.setup["max_game_length_steps"]
+
+
+VIEWPORT_RES_X = 64
+VIEWPORT_RES_Y = 64
+VIEWPORT_FOV = 128 / 180 * math.pi  # 128° in radians
+MAX_BLOCK_DISTANCE = 8
+
+
+@jit(nopython=True)
+def numba_getViewport(lookingVector: (float, float, float),
+                      environment: np.ndarray,
+                      playerPos: (float, float, float)) -> np.ndarray:
+    viewport = []
+    for y in range(VIEWPORT_RES_Y):
+        y -= VIEWPORT_RES_Y / 2  # Convert to be from -ymax/2 to +ymax/2
+        y = y / (VIEWPORT_RES_Y / 2) * VIEWPORT_FOV  # Convert to degrees offset from center
+        viewY = []
+        for x in range(VIEWPORT_RES_X):
+            x -= VIEWPORT_RES_X / 2  # Convert to be from -xmax/2 to +xmax/2
+            x = x / (VIEWPORT_RES_X / 2) * VIEWPORT_FOV  # Convert to degrees offset from center
+
+            pointingVector = numba_Vec3Rotate(lookingVector, y, x)
+            blockDistance = numba_getBlockDistance(playerPos, pointingVector, MAX_BLOCK_DISTANCE, environment)
+            blockClose = MAX_BLOCK_DISTANCE - blockDistance  # 8 = Right in front of player, 0 = Far away
+            viewY.append(((blockClose / 2) ** 2))  # Block distance close=4^2=16 ->0,.25,1,2.25,4,6.25,9,12.5,16 ->/16
+
+        viewport.append(viewY)
+
+    return np.array(viewport)

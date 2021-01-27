@@ -331,14 +331,13 @@ class Game:
 
         vector = vector.normalize()
 
-        return numba_getBlockDistance((position.x, position.y, position.z),
-                                      (vector.x, vector.y, vector.z), maxDistance, self.environment)
+        return numba_getBlockDistance(position.asTuple(), vector.asTuple(), maxDistance, self.environment)
 
     @staticmethod
     # returns (blockPosition, rayCollisionWithTheBLock)
     def __getNextBlock(pos: Vec3, direct: Vec3) -> (Vec3, Vec3):
-        (x, y, z), (rX, rY, rZ) = numba_getNextBlock((pos.x, pos.y, pos.z), (direct.x, direct.y, direct.z))
-        return Vec3(x, y, z), Vec3(rX, rY, rZ)
+        blockPos, rayPos = numba_getNextBlock(pos.asTuple(), direct.asTuple())
+        return Vec3.fromTuple(blockPos), Vec3.fromTuple(rayPos)
 
     # endregion
 

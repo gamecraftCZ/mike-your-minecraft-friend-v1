@@ -38,11 +38,13 @@ def benchmark_blockAttack():
     print(f"Block attack - {elapsed} seconds")
 
 
-TREE_CHOP_ENV_RUNS = 1_000
+TREE_CHOP_ENV_RUNS = 10_000
+
+
 # 100_000 TREE_CHOP_ENV_RUNS took about 125 seconds on my 7300 HQ laptop before Numba optimizations.
-# OLD:                10_000/ 40s -> 250 steps/s
-# NEW (1.1.2020): -> 100_000/125s -> 800 steps/s
-#
+# OLD:                  10_000/ 40s -> 250 steps/s
+# NEW (1.1.2020):   -> 100_000/125s -> 800 steps/s
+# With 64x64 viewport:  10_000/ 59s -> 168 steps/s
 def benchmark_TreeChopEnv():
     env = TreeChopEnv()
 
@@ -66,8 +68,6 @@ def benchmark_TreeChopEnv():
 
 
 VEC3_ROTATE_RUNS = 1_000_000
-
-
 # 1_000_000 runs took about 15s
 # PYTHON:       1_000_000/15s -> 66_666  steps/s
 # NUMBA:        1_000_000/ 8s -> 125_000 steps/s
@@ -87,8 +87,6 @@ def benchmark_Vec3Rotate():
 
 
 GAME_GET_BLOCK_DISTANCE = 1_000_000
-
-
 # 1_000_000 runs took about 15s
 # PYTHON:       100_000/   16s -> 6_250  steps/s
 # NUMBA:        1_000_000/ 14s -> 72_000 steps/s
@@ -109,13 +107,13 @@ def benchmark_gameGetBlockDistance():
     print(f"getBlockDistance - {elapsed} seconds")
 
 
-ENV_GET_OBSERVATION = 10_000
+ENV_GET_OBSERVATION = 1_000
 
 
 # 1_000_000 runs took about 15s
-# PYTHON:       100_000/   16s -> 6_250  steps/s
-# NUMBA:        1_000_000/ 14s -> 72_000 steps/s
-def benchmark_env_getObservation():
+# PYTHON:       100/  12s -> 8   steps/s
+# NUMBA:        1_000/7s ->  143 steps/s
+def benchmark_envGetObservation():
     env = TreeChopEnv()
     print(f"Running for {ENV_GET_OBSERVATION} ticks.")
 
@@ -135,10 +133,10 @@ def benchmark_env_getObservation():
 def main():
     # benchmark_physics()
     # benchmark_blockAttack()
-    # benchmark_TreeChopEnv()
+    benchmark_TreeChopEnv()
     # benchmark_Vec3Rotate()
     # benchmark_gameGetBlockDistance()
-    benchmark_env_getObservation()
+    # benchmark_envGetObservation()
 
 
 if __name__ == '__main__':
