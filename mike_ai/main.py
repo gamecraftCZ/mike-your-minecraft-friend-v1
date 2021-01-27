@@ -65,10 +65,9 @@ def main():
     checkpoint_callback = CheckpointCallback(save_freq=1_000, save_path='./model_checkpoints/')
 
     TIMESTAMPS = 200_000_000  # _000
-    # model = SAC.load("rl_model_635000_steps.zip", env)
-    # model = SAC.load("model_checkpoints/rl_model_205000_steps.zip", env)
-    model.tensorboard_log = "./hhhhhhh_tensorboard/"
-    model.learn(total_timesteps=TIMESTAMPS, callback=[checkpoint_callback, ])
+    # model = PPO2.load("rl_model_373000_steps.zip", env, tensorboard_log="./hhhhhhh_tensorboard/")
+    # model = PPO2.load("model_checkpoints/rl_model_205000_steps.zip", env, tensorboard_log="./hhhhhhh_tensorboard/")
+    model.learn(total_timesteps=TIMESTAMPS, callback=[checkpoint_callback, ], reset_num_timesteps=False)
     model.save(f"trained_{int(time())}_{TIMESTAMPS}.zip")
 
     print("#########################################")
