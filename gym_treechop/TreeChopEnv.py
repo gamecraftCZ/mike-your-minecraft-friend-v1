@@ -282,20 +282,18 @@ MAX_BLOCK_DISTANCE = 8
 def numba_getViewport(lookingVector: (float, float, float),
                       environment: np.ndarray,
                       playerPos: (float, float, float)) -> np.ndarray:
-    viewport = []
-    for y in range(VIEWPORT_RES_Y):
-        y -= VIEWPORT_RES_Y / 2  # Convert to be from -ymax/2 to +ymax/2
+    viewport = np.empty((VIEWPORT_RES_Y, VIEWPORT_RES_X))
+    for yIndex in range(VIEWPORT_RES_Y):
+        y = yIndex - VIEWPORT_RES_Y / 2  # Convert to be from -ymax/2 to +ymax/2
         y = y / (VIEWPORT_RES_Y / 2) * VIEWPORT_FOV  # Convert to degrees offset from center
-        viewY = []
-        for x in range(VIEWPORT_RES_X):
-            x -= VIEWPORT_RES_X / 2  # Convert to be from -xmax/2 to +xmax/2
+        for xIndex in range(VIEWPORT_RES_X):
+            x = xIndex - VIEWPORT_RES_X / 2  # Convert to be from -xmax/2 to +xmax/2
             x = x / (VIEWPORT_RES_X / 2) * VIEWPORT_FOV  # Convert to degrees offset from center
 
             pointingVector = numba_Vec3Rotate(lookingVector, y, x)
             blockDistance = numba_getBlockDistance(playerPos, pointingVector, MAX_BLOCK_DISTANCE, environment)
-            blockClose = MAX_BLOCK_DISTANCE - blockDistance  # 8 = Right in front of player, 0 = Far away
-            viewY.append(((blockClose / 2) ** 2))  # Block distance close=4^2=16 ->0,.25,1,2.25,4,6.25,9,12.5,16 ->/16
+            blockClose = MAX_BLOCK_DISTANCE - blockDistance  # 8 = Right in front of player -> 0 = Far away
+            finalDistance = ((blockClose / 2) ** 2)  # Block distance close=4^2=16 ->0,.25,1,2.25,4,6.25,9,12.5,16 ->/16
+            viewport[yIndex][xIndex] = finalDistance
 
-        viewport.append(viewY)
-
-    return np.array(viewport)
+    return viewport

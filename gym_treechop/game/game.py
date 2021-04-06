@@ -5,7 +5,7 @@ from typing import List
 
 import numpy as np
 from numba import jit
-from tensorflow.python.keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 
 from gym_treechop.game.constants import MIN_TREE_HEIGHT, WORLD_SHAPE, MAX_TREE_HEIGHT, Blocks, JUMP_VELOCITY, \
     WALK_VELOCITY, BLOCK_TYPES, BlockHardness, HARDNESS_MULTIPLIER, BREAKING_RANGE, WORLD_SHAPE_TUPLE

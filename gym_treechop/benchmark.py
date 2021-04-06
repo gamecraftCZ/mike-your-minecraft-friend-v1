@@ -48,6 +48,11 @@ TREE_CHOP_ENV_RUNS = 10_000
 def benchmark_TreeChopEnv():
     env = TreeChopEnv()
 
+    # Prepare numba JIT function
+    action = env.action_space.sample()
+    obs, rewards, done, info = env.step(action)
+
+    # Run
     print(f"Running for {TREE_CHOP_ENV_RUNS} runs.")
     startTime = time()
     for tick in range(TREE_CHOP_ENV_RUNS):
